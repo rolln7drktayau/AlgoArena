@@ -13,6 +13,7 @@ import {
   YAxis
 } from "recharts";
 import type { GenerationSnapshot } from "../types";
+import { downsampleScatterPoints } from "../lib/chartWorker";
 
 const COLORS = ["#29dba6", "#f18f01", "#6bb9ff", "#f45b69", "#9b5de5", "#f9c74f", "#80ed99", "#577590"];
 
@@ -44,6 +45,7 @@ const project3D = (point: number[], angle: number): { x: number; y: number } => 
 
 export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algorithmNameById }: Props) => {
   const [selectedMetric, setSelectedMetric] = useState("hv");
+  const [downsampledPopByAlgorithm, setDownsampledPopByAlgorithm] = useState<Record<string, number[][]>>({});
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const latestByAlgorithm = useMemo(() => {
@@ -76,6 +78,50 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
   }, [algorithmNameById, selectedMetric, snapshotsByAlgorithm]);
 
   useEffect(() => {
+    let cancelled = false;
+    const rawEntries = latestByAlgorithm.map((row) => ({
+      algorithmId: row.algorithmId,
+      points: row.snapshot.population.map((member) => ({
+        x: member.f[0] ?? 0,
+        y: member.f[1] ?? 0,
+        z: member.f[2] ?? 0,
+        f: member.f
+      }))
+    }));
+
+    const run = async () => {
+      const next: Record<string, number[][]> = {};
+      for (const entry of rawEntries) {
+        const points = entry.points;
+        if (points.length === 0) {
+          next[entry.algorithmId] = [];
+          continue;
+        }
+        if (points.length <= 1200) {
+          next[entry.algorithmId] = points.map((point) => point.f);
+          continue;
+        }
+        try {
+          const sampled = await downsampleScatterPoints(points, 1200);
+          next[entry.algorithmId] = sampled
+            .map((point) => (Array.isArray(point.f) ? (point.f as number[]) : [point.x as number, point.y as number, point.z as number]))
+            .map((row) => row.slice(0, Math.max(2, objectiveCount)));
+        } catch {
+          next[entry.algorithmId] = points.slice(0, 1200).map((point) => point.f);
+        }
+      }
+      if (!cancelled) {
+        setDownsampledPopByAlgorithm(next);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [latestByAlgorithm, objectiveCount]);
+
+  useEffect(() => {
     if (!svgRef.current || objectiveCount < 3) {
       return;
     }
@@ -94,8 +140,9 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
     const allProjected: Array<{ x: number; y: number; color: string }> = [];
     latestByAlgorithm.forEach((row, index) => {
       const angle = (row.snapshot.generation * Math.PI) / 40;
-      row.snapshot.population.forEach((member) => {
-        const projected = project3D(member.f, angle);
+      const front = downsampledPopByAlgorithm[row.algorithmId] ?? row.snapshot.population.map((member) => member.f);
+      front.forEach((f) => {
+        const projected = project3D(f, angle);
         allProjected.push({ ...projected, color: COLORS[index % COLORS.length] });
       });
     });
@@ -128,7 +175,7 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
       .attr("transform", "translate(35,0)")
       .call(d3.axisLeft(scaleY).ticks(5) as never)
       .attr("color", "#7da2b8");
-  }, [latestByAlgorithm, objectiveCount]);
+  }, [downsampledPopByAlgorithm, latestByAlgorithm, objectiveCount]);
 
   if (latestByAlgorithm.length === 0) {
     return (
@@ -175,7 +222,9 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
                     <Scatter
                       key={row.algorithmId}
                       name={row.algorithmName}
-                      data={row.snapshot.population.map((member) => ({ x: member.f[0], y: member.f[1] }))}
+                      data={(downsampledPopByAlgorithm[row.algorithmId] ?? row.snapshot.population.map((member) => member.f)).map(
+                        (values) => ({ x: values[0], y: values[1] })
+                      )}
                       fill={COLORS[index % COLORS.length]}
                     />
                   ))}
@@ -215,4 +264,3 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
     </section>
   );
 };
-

@@ -45,6 +45,8 @@ def test_scenario_returns_failures_without_crashing() -> None:
         algorithms=["NSGA-II", "UnknownAlgo"],
         population_size=20,
         generations=5,
+        repetitions=2,
+        base_seed=42,
         objective_names=["Latency", "Cost", "Energy"],
         objective_targets={"Latency": 2.0},
     )
@@ -54,8 +56,12 @@ def test_scenario_returns_failures_without_crashing() -> None:
     assert len(result["failed_algorithms"]) == 1
     assert result["failed_algorithms"][0]["algorithm_name"] == "UnknownAlgo"
     winner = result["results"][0]
+    assert winner["repeat_count"] >= 1
+    assert "repeat_stats" in winner
+    assert "run_samples" in winner
     assert "makespan" in winner["best_objectives"]
     assert "execution_speed" in winner["best_objectives"]
+    assert result["attainment"] is not None
 
 
 def test_scenario_with_workflow_catalog_tasks() -> None:
@@ -68,6 +74,8 @@ def test_scenario_with_workflow_catalog_tasks() -> None:
         algorithms=["NSGA-II", "Random Search"],
         population_size=20,
         generations=3,
+        repetitions=2,
+        base_seed=7,
         objective_names=["Latency", "Cost", "Energy"],
         workflow_id=str(montage["workflow_id"]),
         workflow_task_limit=12,
@@ -77,6 +85,7 @@ def test_scenario_with_workflow_catalog_tasks() -> None:
     assert result["workflow"]["workflow_id"] == montage["workflow_id"]
     assert result["task_count"] == 12
     assert len(result["results"]) >= 1
+    assert result["repetitions"] == 2
 
 
 def test_scenario_accepts_manual_objective_specs() -> None:
@@ -90,6 +99,8 @@ def test_scenario_accepts_manual_objective_specs() -> None:
         algorithms=["NSGA-II", "Random Search"],
         population_size=20,
         generations=4,
+        repetitions=3,
+        base_seed=100,
         objective_specs=[
             {"name": "Latency", "key": "latency", "direction": "min"},
             {"name": "Cost", "key": "cost", "direction": "min"},
@@ -105,3 +116,5 @@ def test_scenario_accepts_manual_objective_specs() -> None:
     assert "Makespan" in first["objective_values"]
     assert "Execution Speed" in first["objective_values"]
     assert first["objective_directions"]["Execution Speed"] == "max"
+    assert first["repeat_count"] >= 1
+    assert first["repeat_stats"]["metrics"]

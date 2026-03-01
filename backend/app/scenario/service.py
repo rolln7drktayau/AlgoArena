@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import heapq
 import math
+import random
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -261,16 +262,25 @@ def _run_algorithm(
     generations: int,
     objective_specs: list[ObjectiveSpec],
     objective_targets: dict[str, float] | None,
+    seed: int | None,
 ) -> dict[str, Any]:
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    hyperparams = {
+        "population_size": population_size,
+        "generations": generations,
+        "crossover_rate": 0.9,
+        "mutation_rate": 0.15,
+    }
+    if seed is not None:
+        hyperparams["seed"] = seed
+
     algorithm = create_algorithm_instance(
         algorithm_name,
         problem,
-        {
-            "population_size": population_size,
-            "generations": generations,
-            "crossover_rate": 0.9,
-            "mutation_rate": 0.15,
-        },
+        hyperparams,
     )
     last_snapshot = None
     while not algorithm.is_done():
@@ -300,6 +310,7 @@ def _run_algorithm(
     best_features = problem.evaluate_features(best_solution)
     schedule = problem.decode_schedule(best_solution)
     objective_map = _objective_value_map(objective_specs, best_objectives)
+    population_objectives = [_objective_value_map(objective_specs, row) for row in obj_values]
     goal_distance, target_satisfaction = _goal_distance(objective_map, objective_specs, objective_targets)
 
     metrics = compute_metrics(obj_values)
@@ -325,6 +336,8 @@ def _run_algorithm(
         "schedule": schedule,
         "generation": last_snapshot.generation,
         "elapsed_sec": last_snapshot.elapsed_sec,
+        "population_objectives": population_objectives,
+        "run_seed": seed,
     }
 
 
@@ -417,6 +430,257 @@ def _emit_update(on_update: Callable[[dict[str, Any]], None] | None, payload: di
         return
 
 
+def _stat_summary(values: list[float | None]) -> dict[str, float] | None:
+    clean = np.asarray([float(value) for value in values if value is not None and np.isfinite(value)], dtype=float)
+    if clean.size == 0:
+        return None
+    mean = float(np.mean(clean))
+    std = float(np.std(clean, ddof=1)) if clean.size > 1 else 0.0
+    half_ci = float(1.96 * std / math.sqrt(clean.size)) if clean.size > 1 else 0.0
+    return {
+        "n": float(clean.size),
+        "mean": mean,
+        "std": std,
+        "ci95_low": mean - half_ci,
+        "ci95_high": mean + half_ci,
+    }
+
+
+def _pick_representative_run(
+    outputs: list[dict[str, Any]],
+    objective_specs: list[ObjectiveSpec],
+    objective_targets: dict[str, float] | None,
+) -> dict[str, Any]:
+    if len(outputs) == 1:
+        return outputs[0]
+
+    if objective_targets:
+        ordered = sorted(
+            outputs,
+            key=lambda item: (
+                item["goal_distance"] if item["goal_distance"] is not None else float("inf"),
+                item["elapsed_sec"],
+            ),
+        )
+        return ordered[0]
+
+    first_name = objective_specs[0].name
+    first_direction = objective_specs[0].direction
+    ordered = sorted(
+        outputs,
+        key=lambda item: (
+            (
+                -item["objective_values"].get(first_name, -float("inf"))
+                if first_direction == "max"
+                else item["objective_values"].get(first_name, float("inf"))
+            ),
+            item["elapsed_sec"],
+        ),
+    )
+    return ordered[0]
+
+
+def _aggregate_algorithm_runs(
+    algorithm_name: str,
+    outputs: list[dict[str, Any]],
+    objective_specs: list[ObjectiveSpec],
+    objective_targets: dict[str, float] | None,
+    repeat_failures: list[dict[str, Any]],
+) -> dict[str, Any]:
+    representative = _pick_representative_run(outputs, objective_specs, objective_targets)
+
+    objective_stats: dict[str, dict[str, float]] = {}
+    objective_means: dict[str, float] = {}
+    for spec in objective_specs:
+        stat = _stat_summary([output["objective_values"].get(spec.name) for output in outputs])
+        if stat is None:
+            continue
+        objective_stats[spec.name] = stat
+        objective_means[spec.name] = stat["mean"]
+
+    metric_keys = sorted({key for output in outputs for key in output["quality_metrics"].keys()})
+    metric_stats: dict[str, dict[str, float]] = {}
+    metric_means: dict[str, float] = {}
+    for key in metric_keys:
+        stat = _stat_summary([output["quality_metrics"].get(key) for output in outputs])
+        if stat is None:
+            continue
+        metric_stats[key] = stat
+        metric_means[key] = stat["mean"]
+
+    elapsed_stats = _stat_summary([float(output["elapsed_sec"]) for output in outputs]) or {
+        "n": float(len(outputs)),
+        "mean": float(representative["elapsed_sec"]),
+        "std": 0.0,
+        "ci95_low": float(representative["elapsed_sec"]),
+        "ci95_high": float(representative["elapsed_sec"]),
+    }
+    generation_stats = _stat_summary([float(output["generation"]) for output in outputs]) or {
+        "n": float(len(outputs)),
+        "mean": float(representative["generation"]),
+        "std": 0.0,
+        "ci95_low": float(representative["generation"]),
+        "ci95_high": float(representative["generation"]),
+    }
+    goal_distance_stats = _stat_summary([output.get("goal_distance") for output in outputs])
+    target_satisfaction_stats = _stat_summary([output.get("target_satisfaction") for output in outputs])
+
+    run_samples: list[dict[str, Any]] = []
+    for index, output in enumerate(outputs, start=1):
+        run_samples.append(
+            {
+                "repeat_index": index,
+                "seed": output.get("run_seed"),
+                "elapsed_sec": float(output["elapsed_sec"]),
+                "generation": int(output["generation"]),
+                "objective_values": output["objective_values"],
+                "quality_metrics": output["quality_metrics"],
+                "goal_distance": output.get("goal_distance"),
+                "target_satisfaction": output.get("target_satisfaction"),
+            }
+        )
+
+    return {
+        "algorithm_name": algorithm_name,
+        "best_objectives": representative["best_objectives"],
+        "objective_directions": representative["objective_directions"],
+        "objective_values": objective_means if objective_means else representative["objective_values"],
+        "goal_distance": goal_distance_stats["mean"] if goal_distance_stats else representative.get("goal_distance"),
+        "target_satisfaction": (
+            target_satisfaction_stats["mean"] if target_satisfaction_stats else representative.get("target_satisfaction")
+        ),
+        "quality_metrics": metric_means if metric_means else representative["quality_metrics"],
+        "schedule": representative["schedule"],
+        "generation": int(round(generation_stats["mean"])),
+        "elapsed_sec": float(elapsed_stats["mean"]),
+        "repeat_count": len(outputs),
+        "repeat_stats": {
+            "metrics": metric_stats,
+            "objectives": objective_stats,
+            "elapsed_sec": elapsed_stats,
+            "generation": generation_stats,
+            "goal_distance": goal_distance_stats,
+            "target_satisfaction": target_satisfaction_stats,
+        },
+        "run_samples": run_samples,
+        "repeat_failures": repeat_failures,
+    }
+
+
+def _dominates_cell(
+    point: tuple[float, float],
+    cell: tuple[float, float],
+    objective_x: ObjectiveSpec,
+    objective_y: ObjectiveSpec,
+) -> bool:
+    x_ok = point[0] <= cell[0] if objective_x.direction == "min" else point[0] >= cell[0]
+    y_ok = point[1] <= cell[1] if objective_y.direction == "min" else point[1] >= cell[1]
+    return x_ok and y_ok
+
+
+def _build_empirical_attainment(
+    objective_specs: list[ObjectiveSpec],
+    per_algorithm_runs: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any] | None:
+    if len(objective_specs) < 2:
+        return None
+
+    objective_x = objective_specs[0]
+    objective_y = objective_specs[1]
+    all_points: list[tuple[float, float]] = []
+    prepared_runs: dict[str, list[list[tuple[float, float]]]] = {}
+
+    for algorithm_name, runs in per_algorithm_runs.items():
+        run_rows: list[list[tuple[float, float]]] = []
+        for run in runs:
+            points: list[tuple[float, float]] = []
+            for objective_map in run.get("population_objectives", []):
+                x_val = objective_map.get(objective_x.name)
+                y_val = objective_map.get(objective_y.name)
+                if x_val is None or y_val is None:
+                    continue
+                pair = (float(x_val), float(y_val))
+                points.append(pair)
+                all_points.append(pair)
+            run_rows.append(points)
+        prepared_runs[algorithm_name] = run_rows
+
+    if not all_points:
+        return None
+
+    x_values = [point[0] for point in all_points]
+    y_values = [point[1] for point in all_points]
+    x_min, x_max = min(x_values), max(x_values)
+    y_min, y_max = min(y_values), max(y_values)
+    if np.isclose(x_min, x_max):
+        x_max = x_min + 1.0
+    if np.isclose(y_min, y_max):
+        y_max = y_min + 1.0
+
+    grid_size = 36
+    x_grid = np.linspace(x_min, x_max, grid_size)
+    y_grid = np.linspace(y_min, y_max, grid_size)
+    levels = (0.5, 0.75, 0.9)
+
+    algorithm_rows: list[dict[str, Any]] = []
+    for algorithm_name, runs in prepared_runs.items():
+        if not runs:
+            continue
+
+        probabilities = np.zeros((grid_size, grid_size), dtype=float)
+        valid_run_count = 0
+        for run_points in runs:
+            if not run_points:
+                continue
+            valid_run_count += 1
+            for x_idx, x_value in enumerate(x_grid):
+                for y_idx, y_value in enumerate(y_grid):
+                    if any(
+                        _dominates_cell(point, (float(x_value), float(y_value)), objective_x=objective_x, objective_y=objective_y)
+                        for point in run_points
+                    ):
+                        probabilities[x_idx, y_idx] += 1.0
+
+        if valid_run_count == 0:
+            continue
+        probabilities /= float(valid_run_count)
+
+        surfaces: list[dict[str, Any]] = []
+        for level in levels:
+            curve: list[dict[str, float]] = []
+            for x_idx, x_value in enumerate(x_grid):
+                attained_idx = np.where(probabilities[x_idx, :] >= level)[0]
+                if attained_idx.size == 0:
+                    continue
+                if objective_y.direction == "min":
+                    y_idx = int(attained_idx[0])
+                else:
+                    y_idx = int(attained_idx[-1])
+                curve.append({"x": float(x_value), "y": float(y_grid[y_idx])})
+            surfaces.append({"level": float(level), "points": curve})
+
+        algorithm_rows.append(
+            {
+                "algorithm_name": algorithm_name,
+                "x_values": [float(value) for value in x_grid],
+                "y_values": [float(value) for value in y_grid],
+                "probability": probabilities.round(6).tolist(),
+                "surfaces": surfaces,
+            }
+        )
+
+    if not algorithm_rows:
+        return None
+
+    return {
+        "x_objective": objective_x.name,
+        "y_objective": objective_y.name,
+        "x_direction": objective_x.direction,
+        "y_direction": objective_y.direction,
+        "algorithms": algorithm_rows,
+    }
+
+
 def _simulate_scenario_internal(
     request: ScenarioRequest,
     on_update: Callable[[dict[str, Any]], None] | None = None,
@@ -432,7 +696,10 @@ def _simulate_scenario_internal(
         objective_specs, objective_targets = _objective_specs_from_request(request)
         problem = SchedulingProblem(tiers, tasks, objectives=objective_specs)
         total_algorithms = len(request.algorithms)
+        repetitions = max(1, int(request.repetitions))
+        total_steps = total_algorithms * repetitions
         completed_algorithms = 0
+        completed_steps = 0
 
         _emit_update(
             on_update,
@@ -446,37 +713,92 @@ def _simulate_scenario_internal(
                 "objective_directions": {spec.name: spec.direction for spec in objective_specs},
                 "total_algorithms": total_algorithms,
                 "completed_algorithms": 0,
+                "repetitions": repetitions,
+                "total_steps": total_steps,
+                "completed_steps": 0,
+                "base_seed": request.base_seed,
             },
         )
 
         algorithm_outputs = []
         failures: list[dict[str, str]] = []
-        for algorithm_name in request.algorithms:
-            try:
-                output = _run_algorithm(
-                    problem=problem,
-                    algorithm_name=algorithm_name,
-                    population_size=request.population_size,
-                    generations=request.generations,
-                    objective_specs=objective_specs,
-                    objective_targets=objective_targets,
-                )
-                algorithm_outputs.append(output)
-                completed_algorithms += 1
-                _emit_update(
-                    on_update,
-                    {
-                        "type": "scenario_result",
-                        "algorithm_name": algorithm_name,
-                        "result": output,
-                        "total_algorithms": total_algorithms,
-                        "completed_algorithms": completed_algorithms,
-                    },
-                )
-            except Exception as exc:
-                message = str(exc)
-                if "supports objective counts" in message:
-                    message = f"Incompatible objective count for this algorithm: {message}"
+        per_algorithm_repeat_outputs: dict[str, list[dict[str, Any]]] = {}
+        for algorithm_index, algorithm_name in enumerate(request.algorithms):
+            successful_runs: list[dict[str, Any]] = []
+            repeat_failures: list[dict[str, Any]] = []
+
+            for repeat_index in range(repetitions):
+                run_seed: int | None = None
+                if request.base_seed is not None:
+                    run_seed = int(request.base_seed + (algorithm_index * 10_000) + repeat_index)
+
+                try:
+                    output = _run_algorithm(
+                        problem=problem,
+                        algorithm_name=algorithm_name,
+                        population_size=request.population_size,
+                        generations=request.generations,
+                        objective_specs=objective_specs,
+                        objective_targets=objective_targets,
+                        seed=run_seed,
+                    )
+                    successful_runs.append(output)
+                    completed_steps += 1
+
+                    _emit_update(
+                        on_update,
+                        {
+                            "type": "scenario_repeat_result",
+                            "algorithm_name": algorithm_name,
+                            "repeat_index": repeat_index + 1,
+                            "repetitions": repetitions,
+                            "sample": {
+                                "repeat_index": repeat_index + 1,
+                                "seed": run_seed,
+                                "elapsed_sec": float(output["elapsed_sec"]),
+                                "generation": int(output["generation"]),
+                                "objective_values": output["objective_values"],
+                                "quality_metrics": output["quality_metrics"],
+                                "goal_distance": output.get("goal_distance"),
+                                "target_satisfaction": output.get("target_satisfaction"),
+                            },
+                            "total_algorithms": total_algorithms,
+                            "completed_algorithms": completed_algorithms,
+                            "total_steps": total_steps,
+                            "completed_steps": completed_steps,
+                        },
+                    )
+                except Exception as exc:
+                    message = str(exc)
+                    if "supports objective counts" in message:
+                        message = f"Incompatible objective count for this algorithm: {message}"
+                    repeat_failures.append(
+                        {
+                            "repeat_index": repeat_index + 1,
+                            "seed": run_seed,
+                            "error": message,
+                        }
+                    )
+                    completed_steps += 1
+                    _emit_update(
+                        on_update,
+                        {
+                            "type": "scenario_repeat_error",
+                            "algorithm_name": algorithm_name,
+                            "repeat_index": repeat_index + 1,
+                            "repetitions": repetitions,
+                            "error": message,
+                            "total_algorithms": total_algorithms,
+                            "completed_algorithms": completed_algorithms,
+                            "total_steps": total_steps,
+                            "completed_steps": completed_steps,
+                        },
+                    )
+
+            if not successful_runs:
+                message = "All repetitions failed."
+                if repeat_failures:
+                    message = repeat_failures[-1]["error"]
                 failures.append({"algorithm_name": algorithm_name, "error": message})
                 completed_algorithms += 1
                 _emit_update(
@@ -485,15 +807,46 @@ def _simulate_scenario_internal(
                         "type": "scenario_algorithm_error",
                         "algorithm_name": algorithm_name,
                         "error": message,
+                        "repeat_failures": repeat_failures,
                         "total_algorithms": total_algorithms,
                         "completed_algorithms": completed_algorithms,
+                        "total_steps": total_steps,
+                        "completed_steps": completed_steps,
                     },
                 )
+                continue
+
+            per_algorithm_repeat_outputs[algorithm_name] = successful_runs
+            aggregated_output = _aggregate_algorithm_runs(
+                algorithm_name=algorithm_name,
+                outputs=successful_runs,
+                objective_specs=objective_specs,
+                objective_targets=objective_targets,
+                repeat_failures=repeat_failures,
+            )
+            algorithm_outputs.append(aggregated_output)
+            completed_algorithms += 1
+            _emit_update(
+                on_update,
+                {
+                    "type": "scenario_result",
+                    "algorithm_name": algorithm_name,
+                    "result": aggregated_output,
+                    "total_algorithms": total_algorithms,
+                    "completed_algorithms": completed_algorithms,
+                    "total_steps": total_steps,
+                    "completed_steps": completed_steps,
+                },
+            )
 
         if objective_targets:
             algorithm_outputs.sort(
                 key=lambda item: (
-                    item["goal_distance"] if item["goal_distance"] is not None else float("inf"),
+                    (
+                        item["repeat_stats"]["goal_distance"]["mean"]
+                        if item.get("repeat_stats", {}).get("goal_distance") is not None
+                        else (item["goal_distance"] if item["goal_distance"] is not None else float("inf"))
+                    ),
                     item["elapsed_sec"],
                 )
             )
@@ -511,6 +864,8 @@ def _simulate_scenario_internal(
                 )
             )
 
+        attainment = _build_empirical_attainment(objective_specs=objective_specs, per_algorithm_runs=per_algorithm_repeat_outputs)
+
         final_response = {
             "task_count": len(tasks),
             "environments": list(request.environments.keys()),
@@ -518,8 +873,11 @@ def _simulate_scenario_internal(
             "objective_names": [spec.name for spec in objective_specs],
             "objective_targets": objective_targets,
             "objective_directions": {spec.name: spec.direction for spec in objective_specs},
+            "repetitions": repetitions,
+            "base_seed": request.base_seed,
             "results": algorithm_outputs,
             "failed_algorithms": failures,
+            "attainment": attainment,
         }
         _emit_update(on_update, {"type": "scenario_completed", "payload": final_response})
         return final_response
@@ -531,8 +889,11 @@ def _simulate_scenario_internal(
             "objective_names": [],
             "objective_targets": {},
             "objective_directions": {},
+            "repetitions": int(request.repetitions),
+            "base_seed": request.base_seed,
             "results": [],
             "failed_algorithms": [{"algorithm_name": "__simulation__", "error": str(exc)}],
+            "attainment": None,
         }
         _emit_update(on_update, {"type": "scenario_error", "error": str(exc), "payload": failure_response})
         _emit_update(on_update, {"type": "scenario_completed", "payload": failure_response})

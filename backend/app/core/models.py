@@ -99,6 +99,8 @@ class ScenarioRequest(BaseModel):
     )
     population_size: int = 80
     generations: int = 50
+    repetitions: int = 1
+    base_seed: int | None = None
     objective_names: list[str] = Field(default_factory=lambda: ["Latency", "Cost", "Energy"])
     objective_targets: dict[str, float] | None = None
     objective_specs: list[ScenarioObjectiveSpec] | None = None
@@ -127,4 +129,11 @@ class ScenarioRequest(BaseModel):
     def validate_workflow_task_limit(cls, value: int | None) -> int | None:
         if value is not None and value < 1:
             raise ValueError("workflow_task_limit must be >= 1 when provided.")
+        return value
+
+    @field_validator("repetitions")
+    @classmethod
+    def validate_repetitions(cls, value: int) -> int:
+        if value < 1 or value > 30:
+            raise ValueError("repetitions must be between 1 and 30.")
         return value

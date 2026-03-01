@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildApiUrl, buildWsUrl } from "../lib/api";
 import { useAppStore } from "../store/useAppStore";
-import type { ScenarioEnvironment, ScenarioObjectiveSpec, ScenarioResult, WorkflowSpec } from "../types";
+import type {
+  ScenarioAttainmentPayload,
+  ScenarioEnvironment,
+  ScenarioObjectiveSpec,
+  ScenarioResult,
+  ScenarioRunSample,
+  WorkflowSpec
+} from "../types";
 import { ScenarioVisualDashboard } from "./ScenarioVisualDashboard";
 
 interface EnvRow {
@@ -95,8 +102,11 @@ interface ScenarioResponse {
     task_count: number;
     available_task_count: number;
   } | null;
+  repetitions?: number;
+  base_seed?: number | null;
   results: ScenarioResult[];
   failed_algorithms: Array<{ algorithm_name: string; error: string }>;
+  attainment?: ScenarioAttainmentPayload | null;
 }
 
 type ScenarioStreamMessage =
@@ -105,15 +115,45 @@ type ScenarioStreamMessage =
       run_id: string;
       total_algorithms: number;
       completed_algorithms: number;
+      total_steps?: number;
+      completed_steps?: number;
+      repetitions?: number;
+      base_seed?: number | null;
       objective_names: string[];
       objective_targets: Record<string, number>;
       objective_directions: Record<string, "min" | "max">;
+    }
+  | {
+      type: "scenario_repeat_result";
+      run_id: string;
+      algorithm_name: string;
+      repeat_index: number;
+      repetitions: number;
+      total_algorithms: number;
+      completed_algorithms: number;
+      total_steps?: number;
+      completed_steps?: number;
+      sample: ScenarioRunSample;
+    }
+  | {
+      type: "scenario_repeat_error";
+      run_id: string;
+      algorithm_name: string;
+      repeat_index: number;
+      repetitions: number;
+      total_algorithms: number;
+      completed_algorithms: number;
+      total_steps?: number;
+      completed_steps?: number;
+      error: string;
     }
   | {
       type: "scenario_result";
       run_id: string;
       total_algorithms: number;
       completed_algorithms: number;
+      total_steps?: number;
+      completed_steps?: number;
       result: ScenarioResult;
     }
   | {
@@ -121,6 +161,8 @@ type ScenarioStreamMessage =
       run_id: string;
       total_algorithms: number;
       completed_algorithms: number;
+      total_steps?: number;
+      completed_steps?: number;
       algorithm_name: string;
       error: string;
     }
@@ -150,14 +192,18 @@ export const ScenarioTab = () => {
   const [workflowLoadError, setWorkflowLoadError] = useState<string | null>(null);
   const [populationSize, setPopulationSize] = useState(80);
   const [generations, setGenerations] = useState(50);
+  const [repetitions, setRepetitions] = useState(5);
+  const [baseSeed, setBaseSeed] = useState<number | "">(42);
   const [results, setResults] = useState<ScenarioResult[]>([]);
   const [resultObjectiveNames, setResultObjectiveNames] = useState<string[]>([]);
   const [resultObjectiveDirections, setResultObjectiveDirections] = useState<Record<string, "min" | "max">>({});
   const [resultObjectiveTargets, setResultObjectiveTargets] = useState<Record<string, number>>({});
+  const [attainment, setAttainment] = useState<ScenarioAttainmentPayload | null>(null);
   const [failedAlgorithms, setFailedAlgorithms] = useState<Array<{ algorithm_name: string; error: string }>>([]);
+  const [liveSamplesByAlgorithm, setLiveSamplesByAlgorithm] = useState<Record<string, ScenarioRunSample[]>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [streamProgress, setStreamProgress] = useState({ completed: 0, total: 0 });
+  const [streamProgress, setStreamProgress] = useState({ completed: 0, total: 0, stepCompleted: 0, stepTotal: 0 });
   const [scenarioSessionId, setScenarioSessionId] = useState(0);
   const [objectiveRows, setObjectiveRows] = useState<ObjectiveRow[]>(defaultObjectiveRows);
   const streamSocketRef = useRef<WebSocket | null>(null);
@@ -217,22 +263,33 @@ export const ScenarioTab = () => {
   const applyScenarioResponse = useCallback(
     (data: ScenarioResponse, compatibleAlgorithms: string[]) => {
       setResults(data.results ?? []);
+      setLiveSamplesByAlgorithm(() =>
+        Object.fromEntries((data.results ?? []).map((result) => [result.algorithm_name, result.run_samples ?? []]))
+      );
       setResultObjectiveNames(data.objective_names ?? []);
       setResultObjectiveTargets(data.objective_targets ?? {});
       setResultObjectiveDirections(data.objective_directions ?? {});
+      setAttainment(data.attainment ?? null);
       setFailedAlgorithms(data.failed_algorithms ?? []);
-      setStreamProgress({ completed: compatibleAlgorithms.length, total: compatibleAlgorithms.length });
+      setStreamProgress({
+        completed: compatibleAlgorithms.length,
+        total: compatibleAlgorithms.length,
+        stepCompleted: compatibleAlgorithms.length * Math.max(1, data.repetitions ?? repetitions),
+        stepTotal: compatibleAlgorithms.length * Math.max(1, data.repetitions ?? repetitions)
+      });
 
       const workflowLabel = data.workflow?.name ? ` [Workflow: ${data.workflow.name}]` : "";
       setFeedback(
-        `Simulated ${data.task_count} tasks${workflowLabel} across ${data.environments.join(", ")}. Success: ${
+        `Simulated ${data.task_count} tasks${workflowLabel} across ${data.environments.join(", ")} with ${
+          data.repetitions ?? repetitions
+        } repeats. Success: ${
           (data.results ?? []).length
         }, Failed: ${(data.failed_algorithms ?? []).length}${
           compatibleAlgorithms.length !== algorithms.length ? " (SPEA2 skipped for >2 objectives)." : ""
         }.`
       );
     },
-    [algorithms.length]
+    [algorithms.length, repetitions]
   );
 
   const updateEnv = (idx: number, key: keyof ScenarioEnvironment, value: number) => {
@@ -256,8 +313,10 @@ export const ScenarioTab = () => {
     setResultObjectiveNames([]);
     setResultObjectiveDirections({});
     setResultObjectiveTargets({});
+    setAttainment(null);
     setFailedAlgorithms([]);
-    setStreamProgress({ completed: 0, total: 0 });
+    setLiveSamplesByAlgorithm({});
+    setStreamProgress({ completed: 0, total: 0, stepCompleted: 0, stepTotal: 0 });
     setScenarioSessionId((previous) => previous + 1);
 
     const normalizedRows = objectiveRows
@@ -297,12 +356,23 @@ export const ScenarioTab = () => {
       }
     });
     const compatibleAlgorithms = algorithms.filter((name) => !(objectiveSpecs.length > 2 && name === "SPEA2"));
+    const normalizedRepetitions = Math.max(1, Math.min(30, Number(repetitions)));
+    const normalizedBaseSeed =
+      baseSeed === "" || Number.isNaN(Number(baseSeed)) ? undefined : Math.trunc(Number(baseSeed));
+    setStreamProgress({
+      completed: 0,
+      total: compatibleAlgorithms.length,
+      stepCompleted: 0,
+      stepTotal: compatibleAlgorithms.length * normalizedRepetitions
+    });
     const payload = {
       environments: environmentPayload,
       tasks: selectedWorkflowId ? [] : makeSyntheticTasks(taskCount),
       algorithms: compatibleAlgorithms,
       population_size: populationSize,
       generations,
+      repetitions: normalizedRepetitions,
+      base_seed: normalizedBaseSeed,
       objective_names: objectiveSpecs.map((item) => item.name),
       objective_targets: targetsPayload,
       objective_specs: objectiveSpecs,
@@ -362,10 +432,90 @@ export const ScenarioTab = () => {
               setResultObjectiveDirections(message.objective_directions ?? {});
               setStreamProgress({
                 completed: message.completed_algorithms ?? 0,
-                total: message.total_algorithms ?? compatibleAlgorithms.length
+                total: message.total_algorithms ?? compatibleAlgorithms.length,
+                stepCompleted: message.completed_steps ?? 0,
+                stepTotal:
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+                `Scenario running... ${message.completed_steps ?? 0}/${
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
+                } repetitions complete.`
+              );
+              return;
+            }
+
+            if (message.type === "scenario_repeat_result") {
+              setLiveSamplesByAlgorithm((previous) => {
+                const current = previous[message.algorithm_name] ?? [];
+                return {
+                  ...previous,
+                  [message.algorithm_name]: [...current, message.sample]
+                };
+              });
+              setResults((previous) => {
+                const existing = previous.find((item) => item.algorithm_name === message.algorithm_name);
+                if (existing) {
+                  return previous.map((item) =>
+                    item.algorithm_name === message.algorithm_name
+                      ? {
+                          ...item,
+                          objective_values: message.sample.objective_values,
+                          quality_metrics: message.sample.quality_metrics,
+                          elapsed_sec: message.sample.elapsed_sec,
+                          generation: message.sample.generation,
+                          run_samples: [...(item.run_samples ?? []), message.sample]
+                        }
+                      : item
+                  );
+                }
+                const fallbackBestObjectives = {
+                  latency: Number(message.sample.objective_values.Latency ?? 0),
+                  cost: Number(message.sample.objective_values.Cost ?? 0),
+                  energy: Number(message.sample.objective_values.Energy ?? 0),
+                  makespan: Number(message.sample.objective_values.Makespan ?? 0),
+                  execution_speed: Number(message.sample.objective_values["Execution Speed"] ?? 0)
+                };
+                const provisional: ScenarioResult = {
+                  algorithm_name: message.algorithm_name,
+                  best_objectives: fallbackBestObjectives,
+                  objective_values: message.sample.objective_values,
+                  quality_metrics: message.sample.quality_metrics,
+                  schedule: [],
+                  generation: message.sample.generation,
+                  elapsed_sec: message.sample.elapsed_sec,
+                  run_samples: [message.sample],
+                  repeat_count: message.repetitions
+                };
+                return [...previous, provisional];
+              });
+              setStreamProgress({
+                completed: message.completed_algorithms ?? 0,
+                total: message.total_algorithms ?? compatibleAlgorithms.length,
+                stepCompleted: message.completed_steps ?? message.repeat_index,
+                stepTotal:
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
+              });
+              setFeedback(
+                `Scenario running... ${message.completed_steps ?? message.repeat_index}/${
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
+                } repetitions complete.`
+              );
+              return;
+            }
+
+            if (message.type === "scenario_repeat_error") {
+              setStreamProgress({
+                completed: message.completed_algorithms ?? 0,
+                total: message.total_algorithms ?? compatibleAlgorithms.length,
+                stepCompleted: message.completed_steps ?? message.repeat_index,
+                stepTotal:
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
+              });
+              setFeedback(
+                `Scenario running... ${message.completed_steps ?? message.repeat_index}/${
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
+                } repetitions complete (with some errors).`
               );
               return;
             }
@@ -378,10 +528,15 @@ export const ScenarioTab = () => {
               });
               setStreamProgress({
                 completed: message.completed_algorithms ?? 0,
-                total: message.total_algorithms ?? compatibleAlgorithms.length
+                total: message.total_algorithms ?? compatibleAlgorithms.length,
+                stepCompleted: message.completed_steps ?? 0,
+                stepTotal:
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+                `Scenario running... ${message.completed_steps ?? 0}/${
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
+                } repetitions complete.`
               );
               return;
             }
@@ -393,10 +548,15 @@ export const ScenarioTab = () => {
               ]);
               setStreamProgress({
                 completed: message.completed_algorithms ?? 0,
-                total: message.total_algorithms ?? compatibleAlgorithms.length
+                total: message.total_algorithms ?? compatibleAlgorithms.length,
+                stepCompleted: message.completed_steps ?? 0,
+                stepTotal:
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+                `Scenario running... ${message.completed_steps ?? 0}/${
+                  message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
+                } repetitions complete.`
               );
               return;
             }
@@ -516,7 +676,7 @@ export const ScenarioTab = () => {
           </table>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
+        <div className="mt-3 grid gap-3 lg:grid-cols-[1.5fr_repeat(6,minmax(0,1fr))]">
           <label className="text-xs text-slate">
             Workflow Preset
             <select
@@ -611,6 +771,37 @@ export const ScenarioTab = () => {
               value={generations}
               onChange={(event) => setGenerations(Number(event.target.value))}
               className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-2 text-xs text-ice"
+            />
+          </label>
+          <label className="text-xs text-slate">
+            Repetitions
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={repetitions}
+              onChange={(event) => setRepetitions(Number(event.target.value))}
+              className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-2 text-xs text-ice"
+            />
+          </label>
+          <label className="text-xs text-slate">
+            Base Seed
+            <input
+              type="number"
+              value={baseSeed}
+              onChange={(event) => {
+                const next = event.target.value.trim();
+                if (!next) {
+                  setBaseSeed("");
+                  return;
+                }
+                const parsed = Number(next);
+                if (!Number.isNaN(parsed)) {
+                  setBaseSeed(parsed);
+                }
+              }}
+              className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-2 text-xs text-ice"
+              placeholder="optional"
             />
           </label>
           <button
@@ -782,9 +973,13 @@ export const ScenarioTab = () => {
         objectiveNames={resultObjectiveNames}
         objectiveDirections={resultObjectiveDirections}
         objectiveTargets={resultObjectiveTargets}
+        attainment={attainment}
+        liveSamplesByAlgorithm={liveSamplesByAlgorithm}
         isRunning={isLoading}
         completedAlgorithms={streamProgress.completed}
         totalAlgorithms={streamProgress.total}
+        completedSteps={streamProgress.stepCompleted}
+        totalSteps={streamProgress.stepTotal}
         sessionId={scenarioSessionId}
       />
     </section>

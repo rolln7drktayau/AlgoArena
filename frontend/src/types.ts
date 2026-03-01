@@ -170,6 +170,57 @@ export interface ScenarioResult {
   schedule: { task_id: string; tier: string }[];
   generation: number;
   elapsed_sec: number;
+  repeat_count?: number;
+  repeat_stats?: {
+    metrics: Record<string, ScenarioStatSummary>;
+    objectives: Record<string, ScenarioStatSummary>;
+    elapsed_sec: ScenarioStatSummary;
+    generation: ScenarioStatSummary;
+    goal_distance?: ScenarioStatSummary | null;
+    target_satisfaction?: ScenarioStatSummary | null;
+  };
+  run_samples?: ScenarioRunSample[];
+  repeat_failures?: Array<{ repeat_index: number; seed?: number | null; error: string }>;
+}
+
+export interface ScenarioRunSample {
+  repeat_index: number;
+  seed?: number | null;
+  elapsed_sec: number;
+  generation: number;
+  objective_values: Record<string, number>;
+  quality_metrics: Record<string, number | null>;
+  goal_distance?: number | null;
+  target_satisfaction?: number | null;
+}
+
+export interface ScenarioStatSummary {
+  n: number;
+  mean: number;
+  std: number;
+  ci95_low: number;
+  ci95_high: number;
+}
+
+export interface ScenarioAttainmentLevel {
+  level: number;
+  points: Array<{ x: number; y: number }>;
+}
+
+export interface ScenarioAttainmentAlgorithm {
+  algorithm_name: string;
+  x_values: number[];
+  y_values: number[];
+  probability: number[][];
+  surfaces: ScenarioAttainmentLevel[];
+}
+
+export interface ScenarioAttainmentPayload {
+  x_objective: string;
+  y_objective: string;
+  x_direction: "min" | "max";
+  y_direction: "min" | "max";
+  algorithms: ScenarioAttainmentAlgorithm[];
 }
 
 export interface ScenarioObjectiveSpec {

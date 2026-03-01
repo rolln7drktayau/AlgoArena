@@ -54,6 +54,7 @@ def test_scenario_websocket_stream_emits_progress_and_completion() -> None:
 
             seen_started = False
             seen_completed = False
+            seen_repeat = False
             payload_result = None
 
             for _ in range(40):
@@ -61,12 +62,15 @@ def test_scenario_websocket_stream_emits_progress_and_completion() -> None:
                 message_type = message.get("type")
                 if message_type == "scenario_started":
                     seen_started = True
+                if message_type == "scenario_repeat_result":
+                    seen_repeat = True
                 if message_type == "scenario_completed":
                     seen_completed = True
                     payload_result = message.get("payload")
                     break
 
     assert seen_started
+    assert seen_repeat
     assert seen_completed
     assert payload_result is not None
     assert len(payload_result.get("results", [])) >= 1
