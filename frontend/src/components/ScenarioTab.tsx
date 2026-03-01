@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { buildApiUrl } from "../lib/api";
 import { useAppStore } from "../store/useAppStore";
 import type { ScenarioEnvironment, ScenarioObjectiveSpec, ScenarioResult, WorkflowSpec } from "../types";
+import { ScenarioVisualDashboard } from "./ScenarioVisualDashboard";
 
 interface EnvRow {
   name: string;
@@ -81,13 +82,6 @@ const makeSyntheticTasks = (count: number) =>
     deadline: 1.5 + ((index * 17) % 10)
   }));
 
-const tallyAssignments = (rows: { task_id: string; tier: string }[]) => {
-  return rows.reduce<Record<string, number>>((acc, row) => {
-    acc[row.tier] = (acc[row.tier] ?? 0) + 1;
-    return acc;
-  }, {});
-};
-
 export const ScenarioTab = () => {
   const allAlgorithms = useAppStore((state) => state.algorithms);
   const [rows, setRows] = useState<EnvRow[]>(defaultRows);
@@ -99,6 +93,9 @@ export const ScenarioTab = () => {
   const [populationSize, setPopulationSize] = useState(80);
   const [generations, setGenerations] = useState(50);
   const [results, setResults] = useState<ScenarioResult[]>([]);
+  const [resultObjectiveNames, setResultObjectiveNames] = useState<string[]>([]);
+  const [resultObjectiveDirections, setResultObjectiveDirections] = useState<Record<string, "min" | "max">>({});
+  const [resultObjectiveTargets, setResultObjectiveTargets] = useState<Record<string, number>>({});
   const [failedAlgorithms, setFailedAlgorithms] = useState<Array<{ algorithm_name: string; error: string }>>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -158,6 +155,9 @@ export const ScenarioTab = () => {
     setIsLoading(true);
     setFeedback(null);
     setResults([]);
+    setResultObjectiveNames([]);
+    setResultObjectiveDirections({});
+    setResultObjectiveTargets({});
     setFailedAlgorithms([]);
     const normalizedRows = objectiveRows
       .map((row, index) => {
@@ -224,6 +224,8 @@ export const ScenarioTab = () => {
         task_count: number;
         environments: string[];
         objective_names: string[];
+        objective_targets: Record<string, number>;
+        objective_directions: Record<string, "min" | "max">;
         workflow?: {
           workflow_id: string;
           name: string;
@@ -235,6 +237,9 @@ export const ScenarioTab = () => {
         failed_algorithms: Array<{ algorithm_name: string; error: string }>;
       };
       setResults(data.results);
+      setResultObjectiveNames(data.objective_names ?? []);
+      setResultObjectiveTargets(data.objective_targets ?? {});
+      setResultObjectiveDirections(data.objective_directions ?? {});
       setFailedAlgorithms(data.failed_algorithms ?? []);
       const workflowLabel = data.workflow?.name ? ` [Workflow: ${data.workflow.name}]` : "";
       setFeedback(
@@ -576,53 +581,12 @@ export const ScenarioTab = () => {
         )}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        {results.map((result) => {
-          const tallies = tallyAssignments(result.schedule);
-          return (
-            <article key={result.algorithm_name} className="rounded-xl border border-stroke bg-card/60 p-4">
-              <h3 className="font-display text-base text-ice">{result.algorithm_name}</h3>
-              <p className="mt-1 text-xs text-slate">
-                {(result.objective_values
-                  ? Object.entries(result.objective_values)
-                  : Object.entries(result.best_objectives)
-                )
-                  .map(([key, value]) => {
-                    const direction = result.objective_directions?.[key];
-                    const marker = direction ? ` (${direction})` : "";
-                    return `${key}${marker} ${Number(value).toFixed(3)}`;
-                  })
-                  .join(" | ")}
-              </p>
-              {typeof result.goal_distance === "number" && (
-                <p className="mt-1 text-[11px] text-amber-300">
-                  Goal distance: {result.goal_distance.toFixed(4)} | Target satisfaction:{" "}
-                  {result.target_satisfaction !== null && result.target_satisfaction !== undefined
-                    ? `${(result.target_satisfaction * 100).toFixed(1)}%`
-                    : "-"}
-                </p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate">
-                {Object.entries(tallies).map(([tier, count]) => (
-                  <span key={tier} className="rounded bg-ink px-2 py-1">
-                    {tier}: {count}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-3 max-h-40 overflow-y-auto rounded border border-stroke bg-ink/70 p-2 font-mono text-[11px] text-ice">
-                {result.schedule.slice(0, 20).map((row) => (
-                  <div key={row.task_id}>
-                    {row.task_id}
-                    {" -> "}
-                    {row.tier}
-                  </div>
-                ))}
-                {result.schedule.length > 20 && <div>... {result.schedule.length - 20} more assignments</div>}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <ScenarioVisualDashboard
+        results={results}
+        objectiveNames={resultObjectiveNames}
+        objectiveDirections={resultObjectiveDirections}
+        objectiveTargets={resultObjectiveTargets}
+      />
     </section>
   );
 };
