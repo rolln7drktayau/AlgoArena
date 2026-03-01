@@ -3,7 +3,7 @@ from __future__ import annotations
 import heapq
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from pymoo.core.problem import Problem
@@ -407,7 +407,20 @@ def _objective_specs_from_request(request: ScenarioRequest) -> tuple[list[Object
     return specs, targets
 
 
-def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
+def _emit_update(on_update: Callable[[dict[str, Any]], None] | None, payload: dict[str, Any]) -> None:
+    if on_update is None:
+        return
+    try:
+        on_update(payload)
+    except Exception:
+        # Streaming callbacks should never break simulation execution.
+        return
+
+
+def _simulate_scenario_internal(
+    request: ScenarioRequest,
+    on_update: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
     try:
         tiers = _tier_data_from_request(request.environments)
         workflow_meta: dict[str, Any] | None = None
@@ -418,6 +431,23 @@ def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
 
         objective_specs, objective_targets = _objective_specs_from_request(request)
         problem = SchedulingProblem(tiers, tasks, objectives=objective_specs)
+        total_algorithms = len(request.algorithms)
+        completed_algorithms = 0
+
+        _emit_update(
+            on_update,
+            {
+                "type": "scenario_started",
+                "task_count": len(tasks),
+                "environments": list(request.environments.keys()),
+                "workflow": workflow_meta,
+                "objective_names": [spec.name for spec in objective_specs],
+                "objective_targets": objective_targets,
+                "objective_directions": {spec.name: spec.direction for spec in objective_specs},
+                "total_algorithms": total_algorithms,
+                "completed_algorithms": 0,
+            },
+        )
 
         algorithm_outputs = []
         failures: list[dict[str, str]] = []
@@ -432,11 +462,33 @@ def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
                     objective_targets=objective_targets,
                 )
                 algorithm_outputs.append(output)
+                completed_algorithms += 1
+                _emit_update(
+                    on_update,
+                    {
+                        "type": "scenario_result",
+                        "algorithm_name": algorithm_name,
+                        "result": output,
+                        "total_algorithms": total_algorithms,
+                        "completed_algorithms": completed_algorithms,
+                    },
+                )
             except Exception as exc:
                 message = str(exc)
                 if "supports objective counts" in message:
                     message = f"Incompatible objective count for this algorithm: {message}"
                 failures.append({"algorithm_name": algorithm_name, "error": message})
+                completed_algorithms += 1
+                _emit_update(
+                    on_update,
+                    {
+                        "type": "scenario_algorithm_error",
+                        "algorithm_name": algorithm_name,
+                        "error": message,
+                        "total_algorithms": total_algorithms,
+                        "completed_algorithms": completed_algorithms,
+                    },
+                )
 
         if objective_targets:
             algorithm_outputs.sort(
@@ -459,7 +511,7 @@ def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
                 )
             )
 
-        return {
+        final_response = {
             "task_count": len(tasks),
             "environments": list(request.environments.keys()),
             "workflow": workflow_meta,
@@ -469,8 +521,10 @@ def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
             "results": algorithm_outputs,
             "failed_algorithms": failures,
         }
+        _emit_update(on_update, {"type": "scenario_completed", "payload": final_response})
+        return final_response
     except Exception as exc:
-        return {
+        failure_response = {
             "task_count": 0,
             "environments": list(request.environments.keys()),
             "workflow": None,
@@ -480,3 +534,17 @@ def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
             "results": [],
             "failed_algorithms": [{"algorithm_name": "__simulation__", "error": str(exc)}],
         }
+        _emit_update(on_update, {"type": "scenario_error", "error": str(exc), "payload": failure_response})
+        _emit_update(on_update, {"type": "scenario_completed", "payload": failure_response})
+        return failure_response
+
+
+def simulate_scenario(request: ScenarioRequest) -> dict[str, Any]:
+    return _simulate_scenario_internal(request=request)
+
+
+def simulate_scenario_stream(
+    request: ScenarioRequest,
+    on_update: Callable[[dict[str, Any]], None],
+) -> dict[str, Any]:
+    return _simulate_scenario_internal(request=request, on_update=on_update)

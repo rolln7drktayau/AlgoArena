@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { buildApiUrl } from "../lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildApiUrl, buildWsUrl } from "../lib/api";
 import { useAppStore } from "../store/useAppStore";
 import type { ScenarioEnvironment, ScenarioObjectiveSpec, ScenarioResult, WorkflowSpec } from "../types";
 import { ScenarioVisualDashboard } from "./ScenarioVisualDashboard";
@@ -82,6 +82,64 @@ const makeSyntheticTasks = (count: number) =>
     deadline: 1.5 + ((index * 17) % 10)
   }));
 
+interface ScenarioResponse {
+  task_count: number;
+  environments: string[];
+  objective_names: string[];
+  objective_targets: Record<string, number>;
+  objective_directions: Record<string, "min" | "max">;
+  workflow?: {
+    workflow_id: string;
+    name: string;
+    family: string;
+    task_count: number;
+    available_task_count: number;
+  } | null;
+  results: ScenarioResult[];
+  failed_algorithms: Array<{ algorithm_name: string; error: string }>;
+}
+
+type ScenarioStreamMessage =
+  | {
+      type: "scenario_started";
+      run_id: string;
+      total_algorithms: number;
+      completed_algorithms: number;
+      objective_names: string[];
+      objective_targets: Record<string, number>;
+      objective_directions: Record<string, "min" | "max">;
+    }
+  | {
+      type: "scenario_result";
+      run_id: string;
+      total_algorithms: number;
+      completed_algorithms: number;
+      result: ScenarioResult;
+    }
+  | {
+      type: "scenario_algorithm_error";
+      run_id: string;
+      total_algorithms: number;
+      completed_algorithms: number;
+      algorithm_name: string;
+      error: string;
+    }
+  | {
+      type: "scenario_completed";
+      run_id: string;
+      payload: ScenarioResponse;
+    }
+  | {
+      type: "scenario_error";
+      run_id: string;
+      error: string;
+      payload?: ScenarioResponse;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
+
 export const ScenarioTab = () => {
   const allAlgorithms = useAppStore((state) => state.algorithms);
   const [rows, setRows] = useState<EnvRow[]>(defaultRows);
@@ -99,7 +157,10 @@ export const ScenarioTab = () => {
   const [failedAlgorithms, setFailedAlgorithms] = useState<Array<{ algorithm_name: string; error: string }>>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [streamProgress, setStreamProgress] = useState({ completed: 0, total: 0 });
+  const [scenarioSessionId, setScenarioSessionId] = useState(0);
   const [objectiveRows, setObjectiveRows] = useState<ObjectiveRow[]>(defaultObjectiveRows);
+  const streamSocketRef = useRef<WebSocket | null>(null);
   const algorithms = useMemo(
     () => allAlgorithms.filter((algo) => algo.enabled).map((algo) => algo.name),
     [allAlgorithms]
@@ -143,6 +204,37 @@ export const ScenarioTab = () => {
     void loadWorkflows();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      const existingSocket = streamSocketRef.current;
+      if (existingSocket) {
+        existingSocket.close();
+        streamSocketRef.current = null;
+      }
+    };
+  }, []);
+
+  const applyScenarioResponse = useCallback(
+    (data: ScenarioResponse, compatibleAlgorithms: string[]) => {
+      setResults(data.results ?? []);
+      setResultObjectiveNames(data.objective_names ?? []);
+      setResultObjectiveTargets(data.objective_targets ?? {});
+      setResultObjectiveDirections(data.objective_directions ?? {});
+      setFailedAlgorithms(data.failed_algorithms ?? []);
+      setStreamProgress({ completed: compatibleAlgorithms.length, total: compatibleAlgorithms.length });
+
+      const workflowLabel = data.workflow?.name ? ` [Workflow: ${data.workflow.name}]` : "";
+      setFeedback(
+        `Simulated ${data.task_count} tasks${workflowLabel} across ${data.environments.join(", ")}. Success: ${
+          (data.results ?? []).length
+        }, Failed: ${(data.failed_algorithms ?? []).length}${
+          compatibleAlgorithms.length !== algorithms.length ? " (SPEA2 skipped for >2 objectives)." : ""
+        }.`
+      );
+    },
+    [algorithms.length]
+  );
+
   const updateEnv = (idx: number, key: keyof ScenarioEnvironment, value: number) => {
     setRows((prev) =>
       prev.map((row, rowIdx) =>
@@ -152,6 +244,12 @@ export const ScenarioTab = () => {
   };
 
   const runScenario = async () => {
+    const existingSocket = streamSocketRef.current;
+    if (existingSocket) {
+      existingSocket.close();
+      streamSocketRef.current = null;
+    }
+
     setIsLoading(true);
     setFeedback(null);
     setResults([]);
@@ -159,6 +257,9 @@ export const ScenarioTab = () => {
     setResultObjectiveDirections({});
     setResultObjectiveTargets({});
     setFailedAlgorithms([]);
+    setStreamProgress({ completed: 0, total: 0 });
+    setScenarioSessionId((previous) => previous + 1);
+
     const normalizedRows = objectiveRows
       .map((row, index) => {
         const name = row.name.trim() || `Objective ${index + 1}`;
@@ -209,7 +310,9 @@ export const ScenarioTab = () => {
       workflow_task_limit:
         selectedWorkflowId && workflowTaskLimit !== "" ? Number(workflowTaskLimit) : undefined
     };
-    try {
+
+    const runViaHttpFallback = async (reason: string) => {
+      setFeedback(`Streaming unavailable (${reason}). Falling back to HTTP mode...`);
       const response = await fetch(buildApiUrl("/api/scenario/simulate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -217,40 +320,133 @@ export const ScenarioTab = () => {
       });
       if (!response.ok) {
         const detail = await response.text();
-        setFeedback(`Simulation failed: ${detail}`);
-        return;
+        throw new Error(detail);
       }
-      const data = (await response.json()) as {
-        task_count: number;
-        environments: string[];
-        objective_names: string[];
-        objective_targets: Record<string, number>;
-        objective_directions: Record<string, "min" | "max">;
-        workflow?: {
-          workflow_id: string;
-          name: string;
-          family: string;
-          task_count: number;
-          available_task_count: number;
-        } | null;
-        results: ScenarioResult[];
-        failed_algorithms: Array<{ algorithm_name: string; error: string }>;
-      };
-      setResults(data.results);
-      setResultObjectiveNames(data.objective_names ?? []);
-      setResultObjectiveTargets(data.objective_targets ?? {});
-      setResultObjectiveDirections(data.objective_directions ?? {});
-      setFailedAlgorithms(data.failed_algorithms ?? []);
-      const workflowLabel = data.workflow?.name ? ` [Workflow: ${data.workflow.name}]` : "";
-      setFeedback(
-        `Simulated ${data.task_count} tasks${workflowLabel} across ${data.environments.join(", ")}. Success: ${data.results.length}, Failed: ${
-          (data.failed_algorithms ?? []).length
-        }${compatibleAlgorithms.length !== algorithms.length ? " (SPEA2 skipped for >2 objectives)." : ""}.`
-      );
-    } catch (error) {
-      setFeedback(`Simulation failed: ${error instanceof Error ? error.message : "Unexpected error"}`);
+      const data = (await response.json()) as ScenarioResponse;
+      applyScenarioResponse(data, compatibleAlgorithms);
+    };
+
+    const runViaStream = () =>
+      new Promise<void>((resolve, reject) => {
+        const ws = new WebSocket(buildWsUrl("/ws/scenario"));
+        streamSocketRef.current = ws;
+        let settled = false;
+
+        const finish = (ok: boolean, errorMessage?: string) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          if (ok) {
+            resolve();
+            return;
+          }
+          reject(new Error(errorMessage ?? "Scenario stream failed."));
+        };
+
+        ws.onopen = () => {
+          ws.send(
+            JSON.stringify({
+              type: "start_scenario",
+              payload
+            })
+          );
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data) as ScenarioStreamMessage;
+            if (message.type === "scenario_started") {
+              setResultObjectiveNames(message.objective_names ?? []);
+              setResultObjectiveTargets(message.objective_targets ?? {});
+              setResultObjectiveDirections(message.objective_directions ?? {});
+              setStreamProgress({
+                completed: message.completed_algorithms ?? 0,
+                total: message.total_algorithms ?? compatibleAlgorithms.length
+              });
+              setFeedback(
+                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+              );
+              return;
+            }
+
+            if (message.type === "scenario_result") {
+              setResults((previous) => {
+                const next = previous.filter((item) => item.algorithm_name !== message.result.algorithm_name);
+                next.push(message.result);
+                return next;
+              });
+              setStreamProgress({
+                completed: message.completed_algorithms ?? 0,
+                total: message.total_algorithms ?? compatibleAlgorithms.length
+              });
+              setFeedback(
+                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+              );
+              return;
+            }
+
+            if (message.type === "scenario_algorithm_error") {
+              setFailedAlgorithms((previous) => [
+                ...previous,
+                { algorithm_name: message.algorithm_name, error: message.error }
+              ]);
+              setStreamProgress({
+                completed: message.completed_algorithms ?? 0,
+                total: message.total_algorithms ?? compatibleAlgorithms.length
+              });
+              setFeedback(
+                `Scenario running... ${message.completed_algorithms ?? 0}/${message.total_algorithms ?? compatibleAlgorithms.length} algorithms complete.`
+              );
+              return;
+            }
+
+            if (message.type === "scenario_completed") {
+              applyScenarioResponse(message.payload, compatibleAlgorithms);
+              ws.close();
+              finish(true);
+              return;
+            }
+
+            if (message.type === "scenario_error" || message.type === "error") {
+              ws.close();
+              finish(false, message.error);
+            }
+          } catch {
+            ws.close();
+            finish(false, "Invalid scenario stream message.");
+          }
+        };
+
+        ws.onerror = () => {
+          finish(false, "WebSocket connection error");
+        };
+
+        ws.onclose = () => {
+          if (streamSocketRef.current === ws) {
+            streamSocketRef.current = null;
+          }
+          if (!settled) {
+            finish(false, "WebSocket closed before completion");
+          }
+        };
+      });
+
+    try {
+      await runViaStream();
+    } catch (streamError) {
+      try {
+        await runViaHttpFallback(streamError instanceof Error ? streamError.message : "unknown stream error");
+      } catch (httpError) {
+        setFeedback(`Simulation failed: ${httpError instanceof Error ? httpError.message : "Unexpected error"}`);
+      }
     } finally {
       setIsLoading(false);
+      const socketAtEnd = streamSocketRef.current;
+      if (socketAtEnd) {
+        socketAtEnd.close();
+        streamSocketRef.current = null;
+      }
     }
   };
 
@@ -586,6 +782,10 @@ export const ScenarioTab = () => {
         objectiveNames={resultObjectiveNames}
         objectiveDirections={resultObjectiveDirections}
         objectiveTargets={resultObjectiveTargets}
+        isRunning={isLoading}
+        completedAlgorithms={streamProgress.completed}
+        totalAlgorithms={streamProgress.total}
+        sessionId={scenarioSessionId}
       />
     </section>
   );

@@ -25,6 +25,10 @@ interface Props {
   objectiveNames: string[];
   objectiveDirections: Record<string, "min" | "max">;
   objectiveTargets: Record<string, number>;
+  isRunning?: boolean;
+  completedAlgorithms?: number;
+  totalAlgorithms?: number;
+  sessionId?: number;
 }
 
 const CHART_COLORS = ["#29dba6", "#f18f01", "#6bb9ff", "#f45b69", "#9b5de5", "#80ed99", "#f9c74f", "#577590"];
@@ -80,30 +84,46 @@ const countTierAssignments = (result: ScenarioResult): Record<string, number> =>
   }, {});
 };
 
-export const ScenarioVisualDashboard = ({ results, objectiveNames, objectiveDirections, objectiveTargets }: Props) => {
+export const ScenarioVisualDashboard = ({
+  results,
+  objectiveNames,
+  objectiveDirections,
+  objectiveTargets,
+  isRunning = false,
+  completedAlgorithms = 0,
+  totalAlgorithms = 0,
+  sessionId = 0
+}: Props) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const [autoPlay, setAutoPlay] = useState(true);
+  const [replaySpeed, setReplaySpeed] = useState(1);
   const [xObjective, setXObjective] = useState("");
   const [yObjective, setYObjective] = useState("");
+
+  useEffect(() => {
+    setVisibleCount(results.length > 0 ? 1 : 0);
+    setAutoPlay(true);
+    setReplaySpeed(1);
+  }, [sessionId]);
 
   useEffect(() => {
     if (results.length === 0) {
       setVisibleCount(0);
       return;
     }
-    setVisibleCount(1);
-    setAutoPlay(true);
-  }, [results]);
+    setVisibleCount((previous) => Math.max(1, Math.min(previous, results.length)));
+  }, [results.length]);
 
   useEffect(() => {
     if (!autoPlay || results.length <= 1 || visibleCount >= results.length) {
       return;
     }
+    const delayMs = Math.max(80, Math.round(550 / Math.max(0.25, replaySpeed)));
     const timer = window.setTimeout(() => {
       setVisibleCount((previous) => Math.min(previous + 1, results.length));
-    }, 220);
+    }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [autoPlay, results.length, visibleCount]);
+  }, [autoPlay, replaySpeed, results.length, visibleCount]);
 
   const resolvedObjectives = useMemo(() => {
     if (objectiveNames.length > 0) {
@@ -237,8 +257,26 @@ export const ScenarioVisualDashboard = ({ results, objectiveNames, objectiveDire
     [visibleResults]
   );
 
-  if (results.length === 0) {
+  if (results.length === 0 && !isRunning) {
     return null;
+  }
+
+  if (results.length === 0 && isRunning) {
+    return (
+      <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-display text-base text-ice">Visual Scenario Insights</h3>
+          <span className="text-xs text-slate">
+            Progress: {completedAlgorithms}/{totalAlgorithms || 0}
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-slate">Preparing live charts. Results will appear progressively.</p>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="h-56 animate-pulse rounded-xl border border-stroke bg-ink/60" />
+          <div className="h-56 animate-pulse rounded-xl border border-stroke bg-ink/60" />
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -249,6 +287,9 @@ export const ScenarioVisualDashboard = ({ results, objectiveNames, objectiveDire
           <p className="text-xs text-slate">Graph-first comparison across objectives, allocation, and execution dynamics.</p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-stroke bg-ink/70 px-2 py-1">
+          <span className="text-[11px] text-slate">
+            Progress: {Math.min(completedAlgorithms, totalAlgorithms || completedAlgorithms)}/{totalAlgorithms || completedAlgorithms}
+          </span>
           <button
             type="button"
             onClick={() => {
@@ -266,6 +307,21 @@ export const ScenarioVisualDashboard = ({ results, objectiveNames, objectiveDire
           >
             {autoPlay ? "Pause" : "Play"}
           </button>
+          <label className="text-[11px] text-slate">
+            Speed
+            <select
+              value={replaySpeed}
+              onChange={(event) => setReplaySpeed(Number(event.target.value))}
+              className="ml-1 rounded border border-stroke bg-card px-2 py-1 text-[11px] text-ice"
+            >
+              <option value={0.5}>0.5x</option>
+              <option value={1}>1x</option>
+              <option value={1.5}>1.5x</option>
+              <option value={2}>2x</option>
+              <option value={3}>3x</option>
+              <option value={4}>4x</option>
+            </select>
+          </label>
           <input
             type="range"
             min={1}
