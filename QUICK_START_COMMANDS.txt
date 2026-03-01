@@ -1,0 +1,47 @@
+AlgoArena - Quick Start Commands
+===============================
+
+Windows PowerShell (manual)
+---------------------------
+cd E:\AlgoArena
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r backend\requirements.txt
+
+# Terminal 1 (backend)
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 (frontend)
+cd frontend
+npm install
+npm run dev
+
+Windows PowerShell (one command)
+--------------------------------
+powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1
+
+WSL / Linux (manual)
+--------------------
+cd /mnt/e/AlgoArena
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+
+# Terminal 1 (backend)
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 (frontend)
+cd /mnt/e/AlgoArena/frontend
+npm install
+npm run dev
+
+WSL / Linux (one command)
+-------------------------
+chmod +x scripts/start_wsl.sh
+./scripts/start_wsl.sh
+
+Useful URLs
+-----------
+Frontend: http://localhost:5173
+Backend API: http://localhost:8000
+API Docs: http://localhost:8000/docs

@@ -34,12 +34,10 @@ const objectiveCatalog: Array<{ key: string; label: string; defaultDirection: "m
   { key: "avg_wait", label: "Average Wait", defaultDirection: "min" }
 ];
 
-const defaultObjectiveRows: ObjectiveRow[] = [
+const createDefaultObjectiveRows = (): ObjectiveRow[] => [
   { id: "obj-latency", name: "Latency", key: "latency", direction: "min", target: "", expression: "" },
   { id: "obj-cost", name: "Cost", key: "cost", direction: "min", target: "", expression: "" },
-  { id: "obj-energy", name: "Energy", key: "energy", direction: "min", target: "", expression: "" },
-  { id: "obj-makespan", name: "Makespan", key: "makespan", direction: "min", target: "", expression: "" },
-  { id: "obj-speed", name: "Execution Speed", key: "execution_speed", direction: "max", target: "", expression: "" }
+  { id: "obj-energy", name: "Energy", key: "energy", direction: "min", target: "", expression: "" }
 ];
 
 const defaultRows: EnvRow[] = [
@@ -205,7 +203,7 @@ export const ScenarioTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [streamProgress, setStreamProgress] = useState({ completed: 0, total: 0, stepCompleted: 0, stepTotal: 0 });
   const [scenarioSessionId, setScenarioSessionId] = useState(0);
-  const [objectiveRows, setObjectiveRows] = useState<ObjectiveRow[]>(defaultObjectiveRows);
+  const [objectiveRows, setObjectiveRows] = useState<ObjectiveRow[]>(() => createDefaultObjectiveRows());
   const streamSocketRef = useRef<WebSocket | null>(null);
   const algorithms = useMemo(
     () => allAlgorithms.filter((algo) => algo.enabled).map((algo) => algo.name),
@@ -300,6 +298,32 @@ export const ScenarioTab = () => {
     );
   };
 
+  const clearScenarioRunState = useCallback(() => {
+    setResults([]);
+    setResultObjectiveNames([]);
+    setResultObjectiveDirections({});
+    setResultObjectiveTargets({});
+    setAttainment(null);
+    setFailedAlgorithms([]);
+    setLiveSamplesByAlgorithm({});
+    setStreamProgress({ completed: 0, total: 0, stepCompleted: 0, stepTotal: 0 });
+  }, []);
+
+  const resetSimulationRun = useCallback(
+    (message = "Simulation run reset.") => {
+      const existingSocket = streamSocketRef.current;
+      if (existingSocket) {
+        existingSocket.close();
+        streamSocketRef.current = null;
+      }
+      setIsLoading(false);
+      clearScenarioRunState();
+      setScenarioSessionId((previous) => previous + 1);
+      setFeedback(message);
+    },
+    [clearScenarioRunState]
+  );
+
   const runScenario = async () => {
     const existingSocket = streamSocketRef.current;
     if (existingSocket) {
@@ -309,14 +333,7 @@ export const ScenarioTab = () => {
 
     setIsLoading(true);
     setFeedback(null);
-    setResults([]);
-    setResultObjectiveNames([]);
-    setResultObjectiveDirections({});
-    setResultObjectiveTargets({});
-    setAttainment(null);
-    setFailedAlgorithms([]);
-    setLiveSamplesByAlgorithm({});
-    setStreamProgress({ completed: 0, total: 0, stepCompleted: 0, stepTotal: 0 });
+    clearScenarioRunState();
     setScenarioSessionId((previous) => previous + 1);
 
     const normalizedRows = objectiveRows
@@ -812,6 +829,13 @@ export const ScenarioTab = () => {
           >
             {isLoading ? "Simulating..." : "Simulate Scheduling"}
           </button>
+          <button
+            type="button"
+            onClick={() => resetSimulationRun()}
+            className="h-fit rounded-md border border-stroke px-3 py-2 text-xs font-semibold text-slate lg:self-end"
+          >
+            Reset Simulation Run
+          </button>
         </div>
         {selectedWorkflow && (
           <p className="mt-2 text-[11px] text-slate">
@@ -949,7 +973,7 @@ export const ScenarioTab = () => {
             </button>
             <button
               type="button"
-              onClick={() => setObjectiveRows(defaultObjectiveRows)}
+              onClick={() => setObjectiveRows(createDefaultObjectiveRows())}
               className="rounded border border-stroke px-3 py-1 text-xs text-slate"
             >
               Reset
