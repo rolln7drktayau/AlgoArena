@@ -1,0 +1,2 @@
+"""AlgoArena backend package."""
+

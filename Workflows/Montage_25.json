@@ -1,0 +1,1533 @@
+{
+    "jobs": [
+        {
+            "id": "ID00000",
+            "namespace": "Montage",
+            "name": "mProjectPP",
+            "version": "1.0",
+            "runtime": 13.39,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4222080
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4167312
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4167312
+                }
+            ]
+        },
+        {
+            "id": "ID00001",
+            "namespace": "Montage",
+            "name": "mProjectPP",
+            "version": "1.0",
+            "runtime": 13.83,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4222080
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4171851
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4171851
+                }
+            ]
+        },
+        {
+            "id": "ID00002",
+            "namespace": "Montage",
+            "name": "mProjectPP",
+            "version": "1.0",
+            "runtime": 13.36,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4222080
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157122
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157122
+                }
+            ]
+        },
+        {
+            "id": "ID00003",
+            "namespace": "Montage",
+            "name": "mProjectPP",
+            "version": "1.0",
+            "runtime": 13.6,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4222080
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4174004
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4174004
+                }
+            ]
+        },
+        {
+            "id": "ID00004",
+            "namespace": "Montage",
+            "name": "mProjectPP",
+            "version": "1.0",
+            "runtime": 13.78,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4222080
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4153521
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4153521
+                }
+            ]
+        },
+        {
+            "id": "ID00005",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.59,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4167312
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4167312
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4171851
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4171851
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 272
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 408404
+                }
+            ]
+        },
+        {
+            "id": "ID00006",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.59,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4185623
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4185623
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4181449
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4181449
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 282
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 314191
+                }
+            ]
+        },
+        {
+            "id": "ID00007",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.88,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4155530
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4155530
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4174004
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4174004
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 287
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 228602
+                }
+            ]
+        },
+        {
+            "id": "ID00008",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.81,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157122
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157122
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4143677
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4143677
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 272
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 176356
+                }
+            ]
+        },
+        {
+            "id": "ID00009",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.49,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4149806
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4149806
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4150602
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4150602
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 262
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 233476
+                }
+            ]
+        },
+        {
+            "id": "ID00010",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.51,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4152397
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4152397
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 267
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 251206
+                }
+            ]
+        },
+        {
+            "id": "ID00011",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.51,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4173072
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4173072
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170398
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170398
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 274
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 271248
+                }
+            ]
+        },
+        {
+            "id": "ID00012",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.62,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4153521
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4153521
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4155664
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4155664
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 271
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 313128
+                }
+            ]
+        },
+        {
+            "id": "ID00013",
+            "namespace": "Montage",
+            "name": "mDiffFit",
+            "version": "1.0",
+            "runtime": 10.37,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4141389
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4141389
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163196
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163196
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 297
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 297231
+                }
+            ]
+        },
+        {
+            "id": "ID00014",
+            "namespace": "Montage",
+            "name": "mConcatFit",
+            "version": "1.0",
+            "runtime": 0.72,
+            "inputs": [
+                {
+                    "file": "fits_list.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 245
+                },
+                {
+                    "file": "fit.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 272
+                },
+                {
+                    "file": "diff.txt",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 408404
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "fits.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1889
+                }
+            ]
+        },
+        {
+            "id": "ID00015",
+            "namespace": "Montage",
+            "name": "mBgModel",
+            "version": "1.0",
+            "runtime": 1.42,
+            "inputs": [
+                {
+                    "file": "pimages.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 837
+                },
+                {
+                    "file": "fits.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1889
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                }
+            ]
+        },
+        {
+            "id": "ID00016",
+            "namespace": "Montage",
+            "name": "mBackground",
+            "version": "1.0",
+            "runtime": 10.39,
+            "inputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                },
+                {
+                    "file": "p2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "c2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                },
+                {
+                    "file": "c2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                }
+            ]
+        },
+        {
+            "id": "ID00017",
+            "namespace": "Montage",
+            "name": "mBackground",
+            "version": "1.0",
+            "runtime": 10.64,
+            "inputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                },
+                {
+                    "file": "p2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "c2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                },
+                {
+                    "file": "c2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                }
+            ]
+        },
+        {
+            "id": "ID00018",
+            "namespace": "Montage",
+            "name": "mBackground",
+            "version": "1.0",
+            "runtime": 10.83,
+            "inputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                },
+                {
+                    "file": "p2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "c2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                },
+                {
+                    "file": "c2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                }
+            ]
+        },
+        {
+            "id": "ID00019",
+            "namespace": "Montage",
+            "name": "mBackground",
+            "version": "1.0",
+            "runtime": 10.93,
+            "inputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                },
+                {
+                    "file": "p2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "c2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                },
+                {
+                    "file": "c2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                }
+            ]
+        },
+        {
+            "id": "ID00020",
+            "namespace": "Montage",
+            "name": "mBackground",
+            "version": "1.0",
+            "runtime": 10.76,
+            "inputs": [
+                {
+                    "file": "corrections.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 265
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                },
+                {
+                    "file": "p2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "c2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                },
+                {
+                    "file": "c2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                }
+            ]
+        },
+        {
+            "id": "ID00021",
+            "namespace": "Montage",
+            "name": "mImgTbl",
+            "version": "1.0",
+            "runtime": 1.39,
+            "inputs": [
+                {
+                    "file": "cimages.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 837
+                },
+                {
+                    "file": "c2mass-atlas-ID00000s-jID00000_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                },
+                {
+                    "file": "c2mass-atlas-ID00000s-jID00000.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4163084
+                },
+                {
+                    "file": "c2mass-atlas-ID00001s-jID00001_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                },
+                {
+                    "file": "c2mass-atlas-ID00001s-jID00001.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4161831
+                },
+                {
+                    "file": "c2mass-atlas-ID00002s-jID00002_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                },
+                {
+                    "file": "c2mass-atlas-ID00002s-jID00002.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4182323
+                },
+                {
+                    "file": "c2mass-atlas-ID00003s-jID00003.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                },
+                {
+                    "file": "c2mass-atlas-ID00003s-jID00003_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4170858
+                },
+                {
+                    "file": "c2mass-atlas-ID00004s-jID00004.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                },
+                {
+                    "file": "c2mass-atlas-ID00004s-jID00004_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 4157647
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "newcimages.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1599
+                }
+            ]
+        },
+        {
+            "id": "ID00022",
+            "namespace": "Montage",
+            "name": "mAdd",
+            "version": "1.0",
+            "runtime": 3.03,
+            "inputs": [
+                {
+                    "file": "region.hdr",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 304
+                },
+                {
+                    "file": "newcimages.tbl",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1599
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "mosaic_ID00022_ID00022.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 46509614
+                },
+                {
+                    "file": "mosaic_ID00022_ID00022_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 46509614
+                }
+            ]
+        },
+        {
+            "id": "ID00023",
+            "namespace": "Montage",
+            "name": "mShrink",
+            "version": "1.0",
+            "runtime": 3.86,
+            "inputs": [
+                {
+                    "file": "mosaic_ID00022_ID00022.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 46509614
+                },
+                {
+                    "file": "mosaic_ID00022_ID00022_area.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 46509614
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "shrunken_ID00023_ID00023.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1861129
+                }
+            ]
+        },
+        {
+            "id": "ID00024",
+            "namespace": "Montage",
+            "name": "mJPEG",
+            "version": "1.0",
+            "runtime": 0.45,
+            "inputs": [
+                {
+                    "file": "shrunken_ID00023_ID00023.fits",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 1861129
+                }
+            ],
+            "outputs": [
+                {
+                    "file": "shrunken_ID00023_ID00023.jpg",
+                    "register": true,
+                    "transfer": true,
+                    "optional": false,
+                    "type": "data",
+                    "size": 204856
+                }
+            ]
+        }
+    ],
+    "dependencies": [
+        {
+            "from": "ID00001",
+            "to": "ID00005"
+        },
+        {
+            "from": "ID00000",
+            "to": "ID00005"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00006"
+        },
+        {
+            "from": "ID00000",
+            "to": "ID00006"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00007"
+        },
+        {
+            "from": "ID00003",
+            "to": "ID00007"
+        },
+        {
+            "from": "ID00002",
+            "to": "ID00008"
+        },
+        {
+            "from": "ID00000",
+            "to": "ID00008"
+        },
+        {
+            "from": "ID00002",
+            "to": "ID00009"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00009"
+        },
+        {
+            "from": "ID00002",
+            "to": "ID00010"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00011"
+        },
+        {
+            "from": "ID00003",
+            "to": "ID00011"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00012"
+        },
+        {
+            "from": "ID00004",
+            "to": "ID00012"
+        },
+        {
+            "from": "ID00004",
+            "to": "ID00013"
+        },
+        {
+            "from": "ID00003",
+            "to": "ID00013"
+        },
+        {
+            "from": "ID00012",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00013",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00010",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00011",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00006",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00005",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00009",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00008",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00007",
+            "to": "ID00014"
+        },
+        {
+            "from": "ID00014",
+            "to": "ID00015"
+        },
+        {
+            "from": "ID00000",
+            "to": "ID00016"
+        },
+        {
+            "from": "ID00015",
+            "to": "ID00016"
+        },
+        {
+            "from": "ID00001",
+            "to": "ID00017"
+        },
+        {
+            "from": "ID00015",
+            "to": "ID00017"
+        },
+        {
+            "from": "ID00002",
+            "to": "ID00018"
+        },
+        {
+            "from": "ID00015",
+            "to": "ID00018"
+        },
+        {
+            "from": "ID00003",
+            "to": "ID00019"
+        },
+        {
+            "from": "ID00015",
+            "to": "ID00019"
+        },
+        {
+            "from": "ID00004",
+            "to": "ID00020"
+        },
+        {
+            "from": "ID00015",
+            "to": "ID00020"
+        },
+        {
+            "from": "ID00020",
+            "to": "ID00021"
+        },
+        {
+            "from": "ID00016",
+            "to": "ID00021"
+        },
+        {
+            "from": "ID00017",
+            "to": "ID00021"
+        },
+        {
+            "from": "ID00018",
+            "to": "ID00021"
+        },
+        {
+            "from": "ID00019",
+            "to": "ID00021"
+        },
+        {
+            "from": "ID00021",
+            "to": "ID00022"
+        },
+        {
+            "from": "ID00022",
+            "to": "ID00023"
+        },
+        {
+            "from": "ID00023",
+            "to": "ID00024"
+        }
+    ]
+}

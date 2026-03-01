@@ -1,0 +1,76 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc.*
+*.pyd
+*.pyo
+*.so
+.Python
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+pip-wheel-metadata/
+dist/
+build/
+site/
+
+# Backend artifacts
+backend/.venv/
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs
+*.log
+logs/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Runtime / temp
+tmp/
+temp/
+*.tmp
+*.pid
+
+# Test / report exports
+reports/
+exports/
