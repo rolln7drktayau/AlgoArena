@@ -10,7 +10,7 @@ import type {
   RunSummary
 } from "../types";
 
-type TabName = "benchmark" | "scenario";
+type TabName = "benchmark" | "scenario" | "tutorial";
 type ThemeMode = "dark" | "light";
 
 interface ReplayState {

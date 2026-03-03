@@ -3,7 +3,6 @@
 Ce guide explique comment utiliser AlgoArena de A a Z:
 
 - demarrage local rapide
-- mode web-first (lien public)
 - creation/utilisation du launcher `.exe`
 - usage de la competition et de la simulation
 - plan propose pour changement de theme et de langue
@@ -17,7 +16,6 @@ Sur Windows:
 1. Python 3.11+ (avec `python` dans le `PATH`)
 2. Node.js 20+ et npm
 3. Git
-4. (Optionnel pour mode web-first) `cloudflared`
 
 Verification rapide:
 
@@ -26,13 +24,6 @@ python --version
 node --version
 npm --version
 git --version
-cloudflared --version
-```
-
-Si `cloudflared` n'est pas installe:
-
-```powershell
-winget install --id Cloudflare.cloudflared -e
 ```
 
 ---
@@ -71,12 +62,22 @@ Ce script fait:
    - backend FastAPI sur `http://localhost:8000`
    - frontend Vite sur `http://localhost:5173`
 5. affichage d'un toast Windows de statut
+6. ouverture automatique de l'URL frontend dans ton navigateur
 
 URL utiles:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8000`
 - Docs API: `http://localhost:8000/docs`
+
+---
+
+## 3.b) Pourquoi je vois des terminaux et pas une fenetre desktop ?
+
+`start_windows.ps1` est un lanceur de services (backend + frontend).  
+Ce n'est pas une application desktop native.
+
+Pour une fenetre desktop type Paige, utilise le mode Electron (section 6.b).
 
 ---
 
@@ -104,26 +105,31 @@ npm run dev -- --host 0.0.0.0 --port 5173
 
 ---
 
-## 5) Mode web-first (partage public gratuit)
+## 5) Partage sur reseau local (sans tunnel cloud)
 
-Le mode web-first lance l'app localement + ouvre un tunnel Cloudflare.
+Si tu veux montrer l'app a quelqu'un sur le meme reseau (meme Wi-Fi/LAN), lance d'abord AlgoArena en local:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -WebFirst
+powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1
 ```
 
-Resultat attendu:
+Puis trouve l'IP locale du PC hote:
 
-1. backend et frontend demarrent localement
-2. `cloudflared` s'ouvre dans une nouvelle fenetre
-3. une URL publique `https://...trycloudflare.com` apparait
-4. un toast affiche cette URL
+```powershell
+ipconfig
+```
+
+Ensuite partage:
+
+- Frontend: `http://IP_DU_PC:5173`
+- API: `http://IP_DU_PC:8000`
+- Docs API: `http://IP_DU_PC:8000/docs`
 
 Important:
 
-- ton PC doit rester allume
-- la fenetre `cloudflared` doit rester ouverte
-- ce lien est pratique pour demo/prof, mais pas une infra prod
+- les deux machines doivent etre sur le meme reseau
+- autorise les ports `5173` et `8000` dans le pare-feu Windows si besoin
+- garde les fenetres backend/frontend ouvertes
 
 ---
 
@@ -148,16 +154,35 @@ Mode local:
 .\dist\AlgoArenaLauncher.exe
 ```
 
-Mode web-first:
-
-```powershell
-.\dist\AlgoArenaLauncher.exe -WebFirst
-```
-
 Astuce:
 
 - `-NoToast` pour desactiver les notifications
 - `-SkipInstall` pour accelerer si dependances deja installees
+
+---
+
+## 6.b) Version desktop native (Electron)
+
+### Lancer la fenetre desktop
+
+```powershell
+cd E:\AlgoArena
+npm install
+npm run desktop:dev
+```
+
+### Construire un installateur Windows desktop
+
+```powershell
+cd E:\AlgoArena
+npm install
+npm run desktop:dist:win
+```
+
+Sortie attendue:
+
+- dossier `dist-electron/`
+- fichier setup Windows NSIS
 
 ---
 
@@ -216,12 +241,25 @@ cd E:\AlgoArena
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
 
-## 8.4 `cloudflared` non trouve
+## 8.4 Le launcher ouvre les terminaux mais pas l'app
 
-Installe:
+1. Verifie le frontend:
 
 ```powershell
-winget install --id Cloudflare.cloudflared -e
+Test-NetConnection localhost -Port 5173
+```
+
+2. Verifie l'API:
+
+```powershell
+Test-NetConnection localhost -Port 8000
+```
+
+3. Lance le mode desktop natif:
+
+```powershell
+npm install
+npm run desktop:dev
 ```
 
 ---
@@ -300,12 +338,11 @@ Priorite de traduction (fort impact):
 ## 10) Bonnes pratiques pour demo prof
 
 1. Lance d'abord en local pour verifier
-2. Lance ensuite `-WebFirst` pour obtenir une URL publique
+2. Si besoin de partage, utilise le reseau local (`http://IP_DU_PC:5173`)
 3. Teste benchmark + scenario avant partage
-4. Garde les 3 fenetres ouvertes:
+4. Garde les 2 fenetres ouvertes:
    - backend
    - frontend
-   - cloudflared
 
 ---
 
@@ -315,14 +352,11 @@ Priorite de traduction (fort impact):
 # Local
 powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1
 
-# Web-first
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -WebFirst
-
 # Build EXE
 powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1
 
 # Run EXE
-.\dist\AlgoArenaLauncher.exe -WebFirst
+.\dist\AlgoArenaLauncher.exe
 ```
 
 Fin du guide.

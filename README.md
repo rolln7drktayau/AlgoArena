@@ -1,5 +1,9 @@
 # AlgoArena
 
+<p align="left">
+  <img src="./frontend/public/logo.png" alt="AlgoArena logo" width="96" />
+</p>
+
 AlgoArena is a full-stack single-page application for benchmarking and visually comparing multi-objective optimization algorithms in real time.
 
 Authors: AST & RCT
@@ -135,7 +139,7 @@ Optional:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -SkipInstall
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -WebFirst
+powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -NoToast
 ```
 
 You can also use:
@@ -144,7 +148,24 @@ You can also use:
 .\scripts\start_windows.bat
 ```
 
-Windows launcher can show native toast notifications and can run in web-first mode (`-WebFirst`) by starting a Cloudflare Quick Tunnel when `cloudflared` is installed.
+Windows launcher can show native toast notifications.
+It auto-opens the app URL in your default browser when services are ready.
+
+### Desktop Mode (Electron)
+
+Run a native desktop window (similar to Paige):
+
+```powershell
+npm install
+npm run desktop:dev
+```
+
+Build a Windows desktop installer (`dist-electron`):
+
+```powershell
+npm install
+npm run desktop:dist:win
+```
 
 ### Build Windows EXE Launcher
 
@@ -156,7 +177,6 @@ Then run:
 
 ```powershell
 .\dist\AlgoArenaLauncher.exe
-.\dist\AlgoArenaLauncher.exe -WebFirst
 ```
 
 ### WSL / Linux

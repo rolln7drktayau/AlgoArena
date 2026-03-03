@@ -1,7 +1,7 @@
 param(
     [switch]$SkipInstall,
-    [switch]$WebFirst,
     [switch]$NoToast,
+    [switch]$NoOpenBrowser,
     [int]$StartupTimeoutSec = 45
 )
 
@@ -92,49 +92,6 @@ function Wait-HttpReady {
     return $false
 }
 
-function Start-WebTunnel {
-    param(
-        [string]$RootDir,
-        [int]$WaitSec = 30
-    )
-
-    $cloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
-    if (-not $cloudflared) {
-        Write-Host "cloudflared not found. Install it to enable -WebFirst mode." -ForegroundColor Yellow
-        Show-ToastMessage -Title "AlgoArena Web Mode" -Message "cloudflared introuvable. Mode local uniquement."
-        return $null
-    }
-
-    $tempDir = Join-Path $RootDir "temp"
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    $logFile = Join-Path $tempDir "cloudflared.log"
-    if (Test-Path $logFile) {
-        Remove-Item $logFile -Force
-    }
-
-    $tunnelCmd = "Set-Location '$RootDir'; cloudflared tunnel --url http://localhost:5173 --no-autoupdate --logfile '$logFile'"
-    Write-Host "Starting Cloudflare tunnel in a new PowerShell window..."
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", $tunnelCmd | Out-Null
-
-    $deadline = (Get-Date).AddSeconds($WaitSec)
-    $publicUrl = $null
-    while ((Get-Date) -lt $deadline -and -not $publicUrl) {
-        if (Test-Path $logFile) {
-            $match = Select-String -Path $logFile -Pattern 'https://[a-z0-9-]+\.trycloudflare\.com' -AllMatches -ErrorAction SilentlyContinue | Select-Object -Last 1
-            if ($match -and $match.Matches.Count -gt 0) {
-                $publicUrl = $match.Matches[0].Value
-                break
-            }
-        }
-        Start-Sleep -Milliseconds 700
-    }
-
-    if ($publicUrl) {
-        return $publicUrl
-    }
-    return $null
-}
-
 $RootDir = Get-ProjectRoot
 Set-Location $RootDir
 
@@ -184,28 +141,17 @@ Write-Host "  Backend docs: http://localhost:8000/docs"
 Write-Host "  Frontend:     http://localhost:5173"
 
 if ($backendReady -and $frontendReady) {
+    if (-not $NoOpenBrowser) {
+        Start-Process "http://localhost:5173" | Out-Null
+    }
     Show-ToastMessage -Title "AlgoArena" -Message "Services prêtes: http://localhost:5173"
 }
 else {
     Show-ToastMessage -Title "AlgoArena" -Message "Démarrage en cours. Vérifie les fenêtres backend/frontend."
 }
 
-if ($WebFirst) {
-    $publicUrl = Start-WebTunnel -RootDir $RootDir
-    if ($publicUrl) {
-        Write-Host ""
-        Write-Host "Public URL (web-first): $publicUrl" -ForegroundColor Green
-        Show-ToastMessage -Title "AlgoArena Web Mode" -Message "URL publique: $publicUrl"
-    }
-    else {
-        Write-Host ""
-        Write-Host "Web-first requested, but no public URL was detected yet." -ForegroundColor Yellow
-        Show-ToastMessage -Title "AlgoArena Web Mode" -Message "Tunnel démarré, URL publique non détectée."
-    }
-}
-
 Write-Host ""
 Write-Host "Tips:"
 Write-Host "  -SkipInstall   : skip dependency installation"
-Write-Host "  -WebFirst      : start Cloudflare tunnel for a public URL"
 Write-Host "  -NoToast       : disable Windows toast notifications"
+Write-Host "  -NoOpenBrowser : do not auto-open the app URL"
