@@ -6,6 +6,7 @@ const fs = require("fs");
 const http = require("http");
 
 let backendProcess = null;
+let backendLogPath = null;
 
 function resolveAppRoot() {
   return app.isPackaged ? path.join(process.resourcesPath, "app") : path.resolve(__dirname, "..");
@@ -158,14 +159,31 @@ async function waitForBackendReady(timeoutMs = 30000) {
   return false;
 }
 
+function tailFile(filePath, maxLines = 40) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return "";
+  }
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    const lines = content.split(/\r?\n/).filter(Boolean);
+    return lines.slice(-maxLines).join("\n");
+  } catch (_) {
+    return "";
+  }
+}
+
 function startBackend(appRoot, runtime) {
+  backendLogPath = path.join(runtime.runtimeRoot, "backend.log");
+  fs.writeFileSync(backendLogPath, "", "utf8");
+  const logStream = fs.createWriteStream(backendLogPath, { flags: "a" });
+
   backendProcess = spawn(
     runtime.runtimePython,
     ["-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", "8000"],
     {
       cwd: appRoot,
       windowsHide: true,
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
       env: {
         ...process.env,
         PYTHONPATH: appRoot,
@@ -173,6 +191,16 @@ function startBackend(appRoot, runtime) {
       }
     }
   );
+
+  backendProcess.stdout?.on("data", (chunk) => logStream.write(chunk));
+  backendProcess.stderr?.on("data", (chunk) => logStream.write(chunk));
+  backendProcess.on("close", () => {
+    try {
+      logStream.end();
+    } catch (_) {
+      // no-op
+    }
+  });
 
   backendProcess.on("error", async (error) => {
     await dialog.showMessageBox({
@@ -254,6 +282,7 @@ app.whenReady().then(async () => {
   const ready = await waitForBackendReady();
 
   if (!ready) {
+    const logTail = tailFile(backendLogPath, 50);
     await dialog.showMessageBox({
       type: "error",
       title: "AlgoArena Desktop",
@@ -261,7 +290,9 @@ app.whenReady().then(async () => {
       detail:
         "AlgoArena a tente la preparation automatiquement.\n" +
         "Si le probleme persiste, lance une fois:\n" +
-        "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_windows.ps1"
+        "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_windows.ps1\n\n" +
+        (backendLogPath ? `Log: ${backendLogPath}\n\n` : "") +
+        (logTail ? `Dernieres lignes:\n${logTail}` : "Aucun log backend disponible.")
     });
     await stopBackend();
     app.quit();

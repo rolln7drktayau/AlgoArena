@@ -25,6 +25,9 @@
     "files": [
       "desktop/**/*",
       "backend/**/*",
+      "algorithms/**/*",
+      "problems/**/*",
+      "Workflows/**/*",
       "frontend/dist/**/*",
       "scripts/**/*",
       "package.json",
