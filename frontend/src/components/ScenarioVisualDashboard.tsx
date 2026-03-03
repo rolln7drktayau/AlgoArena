@@ -104,10 +104,11 @@ const downloadBlob = (name: string, blob: Blob) => {
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 const svgFromRef = (ref: React.RefObject<HTMLDivElement>): SVGSVGElement | null => ref.current?.querySelector("svg") ?? null;

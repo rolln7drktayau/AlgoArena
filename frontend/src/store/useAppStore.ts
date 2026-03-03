@@ -12,6 +12,7 @@ import type {
 
 type TabName = "benchmark" | "scenario" | "tutorial";
 type ThemeMode = "dark" | "light";
+type AppLanguage = "fr" | "en";
 
 interface ReplayState {
   enabled: boolean;
@@ -36,6 +37,7 @@ interface AppState {
   pinnedMetrics: string[];
   replay: ReplayState;
   theme: ThemeMode;
+  language: AppLanguage;
   setTab: (tab: TabName) => void;
   setAlgorithmSpecs: (specs: AlgorithmSpec[]) => void;
   setProblems: (specs: ProblemSpec[]) => void;
@@ -57,6 +59,8 @@ interface AppState {
   setReplayPlaying: (playing: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
+  setLanguage: (language: AppLanguage) => void;
+  toggleLanguage: () => void;
 }
 
 const DEFAULT_METRICS = ["hv", "igd", "spread", "generation_speed"];
@@ -87,6 +91,24 @@ const getInitialTheme = (): ThemeMode => {
 const persistTheme = (theme: ThemeMode) => {
   if (typeof window !== "undefined") {
     window.localStorage.setItem("algoarena-theme", theme);
+  }
+};
+
+const getInitialLanguage = (): AppLanguage => {
+  if (typeof window === "undefined") {
+    return "fr";
+  }
+  const stored = window.localStorage.getItem("algoarena-language");
+  if (stored === "fr" || stored === "en") {
+    return stored;
+  }
+  const nav = window.navigator.language.toLowerCase();
+  return nav.startsWith("fr") ? "fr" : "en";
+};
+
+const persistLanguage = (language: AppLanguage) => {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("algoarena-language", language);
   }
 };
 
@@ -166,6 +188,7 @@ export const useAppStore = create<AppState>((set) => ({
   pinnedMetrics: DEFAULT_METRICS,
   replay: { enabled: false, playing: false, index: 0 },
   theme: getInitialTheme(),
+  language: getInitialLanguage(),
 
   setTab: (tab) => set({ tab }),
 
@@ -344,6 +367,16 @@ export const useAppStore = create<AppState>((set) => ({
       const nextTheme: ThemeMode = state.theme === "dark" ? "light" : "dark";
       persistTheme(nextTheme);
       return { theme: nextTheme };
+    }),
+  setLanguage: (language) => {
+    persistLanguage(language);
+    set({ language });
+  },
+  toggleLanguage: () =>
+    set((state) => {
+      const nextLanguage: AppLanguage = state.language === "fr" ? "en" : "fr";
+      persistLanguage(nextLanguage);
+      return { language: nextLanguage };
     })
 }));
 

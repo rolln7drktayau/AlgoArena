@@ -1,69 +1,162 @@
-const Cmd = ({ children }: { children: string }) => (
-  <pre className="overflow-x-auto rounded-lg border border-stroke bg-panel/80 p-3 text-xs text-ice">
-    <code>{children}</code>
-  </pre>
-);
+import { useMemo } from "react";
+import { useAppStore } from "../store/useAppStore";
+
+type UiLanguage = "fr" | "en";
+
+interface TutorialSection {
+  title: string;
+  steps: string[];
+}
+
+const textByLanguage: Record<
+  UiLanguage,
+  {
+    title: string;
+    intro: string;
+    sections: TutorialSection[];
+    noteTitle: string;
+    noteBody: string;
+  }
+> = {
+  fr: {
+    title: "Tutoriel d'utilisation (app deja lancee)",
+    intro:
+      "Ce guide explique quoi faire une fois la fenetre AlgoArena ouverte, sans commandes terminal.",
+    sections: [
+      {
+        title: "1) Navigation generale",
+        steps: [
+          "Utilise les onglets du haut: Benchmark, Scenario Simulator, Tutoriel.",
+          "Change la langue avec le selecteur Francais/English dans l'entete.",
+          "Change le theme avec le bouton Theme sombre / Theme clair."
+        ]
+      },
+      {
+        title: "2) Workflow Benchmark (competition d'algorithmes)",
+        steps: [
+          "Dans Problem Definition, choisis le probleme et les parametres.",
+          "Dans Algorithm Library, active les algorithmes a comparer et ajuste les hyperparametres.",
+          "Clique Lancer la competition pour demarrer.",
+          "Observe le Leaderboard, le Radar et la Competition Grid pendant l'execution.",
+          "Utilise Replay Controls pour revoir l'evolution generation par generation.",
+          "Utilise Exporter CSV / Exporter PDF pour sortir les resultats."
+        ]
+      },
+      {
+        title: "3) Workflow Scenario Simulator",
+        steps: [
+          "Passe sur Scenario Simulator.",
+          "Definis les tiers Edge/Fog/Cloud, le workflow et les objectifs.",
+          "Lance la simulation et suis l'evolution visuelle en direct.",
+          "Regle la vitesse du replay pour accelerer ou ralentir l'animation.",
+          "Exporte les visuels scientifiques (SVG, PNG, LaTeX) depuis le dashboard scenario."
+        ]
+      },
+      {
+        title: "4) Lecture des resultats",
+        steps: [
+          "Hypervolume (HV): plus eleve est generalement meilleur.",
+          "IGD: plus bas est generalement meilleur.",
+          "Regarde la stabilite: un bon score moyen avec variance faible est preferable.",
+          "Compare aussi le temps d'execution et la vitesse de convergence."
+        ]
+      },
+      {
+        title: "5) Si quelque chose semble bloque",
+        steps: [
+          "Utilise Stop puis relance la competition/simulation.",
+          "Verifie que des algorithmes sont bien actives.",
+          "Si un export ne sort rien, relance apres un run complet avec donnees disponibles."
+        ]
+      }
+    ],
+    noteTitle: "Conseil pratique",
+    noteBody:
+      "Pour une comparaison fiable entre algorithmes, garde la meme configuration de probleme et ne change qu'un parametre a la fois."
+  },
+  en: {
+    title: "Usage Tutorial (app already running)",
+    intro:
+      "This guide focuses on what to do after AlgoArena is open, with no terminal commands.",
+    sections: [
+      {
+        title: "1) Global navigation",
+        steps: [
+          "Use the top tabs: Benchmark, Scenario Simulator, Tutorial.",
+          "Switch language with the Francais/English selector in the header.",
+          "Switch theme with the Theme button."
+        ]
+      },
+      {
+        title: "2) Benchmark workflow (algorithm competition)",
+        steps: [
+          "In Problem Definition, select your problem and parameters.",
+          "In Algorithm Library, enable algorithms and tune hyperparameters.",
+          "Click Start Competition to run.",
+          "Monitor Leaderboard, Radar, and Competition Grid during execution.",
+          "Use Replay Controls to review generation-by-generation progress.",
+          "Use Export CSV / Export PDF to save benchmark results."
+        ]
+      },
+      {
+        title: "3) Scenario Simulator workflow",
+        steps: [
+          "Go to Scenario Simulator.",
+          "Define Edge/Fog/Cloud tiers, workflow, and objectives.",
+          "Run simulation and watch the live visual evolution.",
+          "Adjust replay speed to speed up or slow down the animation.",
+          "Export scientific visuals (SVG, PNG, LaTeX) from the scenario dashboard."
+        ]
+      },
+      {
+        title: "4) How to read results",
+        steps: [
+          "Hypervolume (HV): higher is usually better.",
+          "IGD: lower is usually better.",
+          "Check stability: strong mean score with low variance is preferred.",
+          "Also compare execution time and convergence speed."
+        ]
+      },
+      {
+        title: "5) If something looks stuck",
+        steps: [
+          "Use Stop, then restart the run/simulation.",
+          "Make sure at least one algorithm is enabled.",
+          "If an export is empty, retry after a full run with available data."
+        ]
+      }
+    ],
+    noteTitle: "Practical tip",
+    noteBody:
+      "For fair comparisons, keep the same problem setup and change only one parameter at a time."
+  }
+};
 
 export function TutorialTab() {
+  const language = useAppStore((state) => state.language);
+  const text = useMemo(() => textByLanguage[language], [language]);
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h2 className="font-display text-xl">Tutoriel rapide dans l'application</h2>
-        <p className="mt-2 text-sm text-slate">
-          Ce guide te permet de lancer AlgoArena en local puis de tester l'executable Windows.
-        </p>
-        <p className="mt-2 text-sm text-slate">
-          Pourquoi tu vois seulement des terminaux: le script PowerShell demarre les services, ce n'etait pas une app desktop native. Pour une vraie fenetre desktop, utilise le mode Electron ci-dessous.
-        </p>
+        <h2 className="font-display text-xl">{text.title}</h2>
+        <p className="mt-2 text-sm text-slate">{text.intro}</p>
       </section>
 
-      <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h3 className="font-display text-lg">1) Demarrage local (recommande)</h3>
-        <p className="mt-2 text-sm text-slate">Depuis PowerShell, place-toi dans le dossier du projet:</p>
-        <Cmd>cd E:\AlgoArena</Cmd>
-        <p className="mt-2 text-sm text-slate">Puis lance la commande unique:</p>
-        <Cmd>powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1</Cmd>
-        <p className="mt-2 text-sm text-slate">
-          URLs attendues: Frontend http://localhost:5173, API http://localhost:8000, Docs http://localhost:8000/docs
-        </p>
-      </section>
+      {text.sections.map((section) => (
+        <section key={section.title} className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
+          <h3 className="font-display text-lg">{section.title}</h3>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate">
+            {section.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </section>
+      ))}
 
       <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h3 className="font-display text-lg">2) Tester le .exe (pas a pas)</h3>
-        <p className="mt-2 text-sm text-slate">A. Generer l'executable:</p>
-        <Cmd>powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1</Cmd>
-        <p className="mt-2 text-sm text-slate">B. Verifier qu'il existe:</p>
-        <Cmd>Get-Item .\dist\AlgoArenaLauncher.exe</Cmd>
-        <p className="mt-2 text-sm text-slate">C. Test local:</p>
-        <Cmd>.\dist\AlgoArenaLauncher.exe</Cmd>
-        <p className="mt-2 text-sm text-slate">D. Verifications attendues:</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate">
-          <li>Deux fenetres PowerShell s'ouvrent (backend + frontend)</li>
-          <li>Un toast Windows apparait avec l'etat</li>
-          <li>Le frontend est accessible et les runs benchmark/scenario fonctionnent</li>
-        </ul>
-      </section>
-
-      <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h3 className="font-display text-lg">3) Version desktop native (comme Paige)</h3>
-        <p className="mt-2 text-sm text-slate">Mode desktop en fenetre native via Electron:</p>
-        <Cmd>npm install</Cmd>
-        <Cmd>npm run desktop:dev</Cmd>
-        <p className="mt-2 text-sm text-slate">Build installer desktop Windows:</p>
-        <Cmd>npm run desktop:dist:win</Cmd>
-      </section>
-
-      <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h3 className="font-display text-lg">4) Proposition de changement theme + langue</h3>
-        <p className="mt-2 text-sm text-slate">
-          Theme propose: ajouter "lab-dark" et "paper-light" en plus de dark/light.
-        </p>
-        <p className="mt-1 text-sm text-slate">
-          Langue proposee: ajouter FR/EN avec react-i18next et un selecteur de langue dans l'entete.
-        </p>
-        <p className="mt-1 text-sm text-slate">
-          Guide detaille complet disponible dans le fichier GUIDE_COMPLET_FR.md a la racine du projet.
-        </p>
+        <h3 className="font-display text-lg">{text.noteTitle}</h3>
+        <p className="mt-2 text-sm text-slate">{text.noteBody}</p>
       </section>
     </div>
   );

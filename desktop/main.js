@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, shell } = require("electron");
 const { spawn } = require("child_process");
 const crypto = require("crypto");
 const path = require("path");
@@ -7,6 +7,18 @@ const http = require("http");
 
 let backendProcess = null;
 let backendLogPath = null;
+
+function isBackendExportUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.hostname !== "127.0.0.1" || parsed.port !== "8000") {
+      return false;
+    }
+    return /^\/api\/runs\/[^/]+\/export\/(csv|pdf)$/.test(parsed.pathname);
+  } catch (_) {
+    return false;
+  }
+}
 
 function resolveAppRoot() {
   return app.isPackaged ? path.join(process.resourcesPath, "app") : path.resolve(__dirname, "..");
@@ -258,6 +270,32 @@ function createWindow(appRoot) {
   });
 
   win.setMenuBarVisibility(false);
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isBackendExportUrl(url)) {
+      win.webContents.downloadURL(url);
+      return { action: "deny" };
+    }
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isBackendExportUrl(url)) {
+      event.preventDefault();
+      win.webContents.downloadURL(url);
+      return;
+    }
+    if (url.startsWith("http://127.0.0.1:8000")) {
+      return;
+    }
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      event.preventDefault();
+      void shell.openExternal(url);
+    }
+  });
+
   win.loadURL("http://127.0.0.1:8000");
 }
 
@@ -298,6 +336,19 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
+
+  await dialog.showMessageBox({
+    type: "info",
+    title: "AlgoArena Desktop",
+    message: "AlgoArena is ready.",
+    detail:
+      "Local app URL: http://127.0.0.1:8000\n" +
+      "API docs URL: http://127.0.0.1:8000/docs\n\n" +
+      "Close this message to open the desktop window.",
+    buttons: ["OK"],
+    defaultId: 0,
+    noLink: true
+  });
 
   createWindow(appRoot);
 });

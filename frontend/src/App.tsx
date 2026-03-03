@@ -16,9 +16,134 @@ import { buildRunPayload, useAppStore } from "./store/useAppStore";
 import type { AlgorithmSpec, ProblemSpec } from "./types";
 import { useShallow } from "zustand/react/shallow";
 
-const exportRun = (runId: string, kind: "csv" | "pdf") => {
+type UiLanguage = "fr" | "en";
+
+const uiText: Record<
+  UiLanguage,
+  {
+    subtitle: string;
+    themeLight: string;
+    themeDark: string;
+    tabBenchmark: string;
+    tabScenario: string;
+    tabTutorial: string;
+    errorNoAlgo: string;
+    scenarioTitle: string;
+    tutorialTitle: string;
+    problemDefTitle: string;
+    algoLibTitle: string;
+    restartRun: string;
+    startRun: string;
+    stop: string;
+    exportCsv: string;
+    exportPdf: string;
+    errorPrefix: string;
+    leaderboardTitle: string;
+    radarTitle: string;
+    competitionGridTitle: string;
+    researchChartsTitle: string;
+    languageFr: string;
+    languageEn: string;
+  }
+> = {
+  fr: {
+    subtitle: "Benchmarking temps reel pour algorithmes d'optimisation multi-objectifs",
+    themeLight: "Theme clair",
+    themeDark: "Theme sombre",
+    tabBenchmark: "Benchmark",
+    tabScenario: "Scenario Simulator",
+    tabTutorial: "Tutoriel",
+    errorNoAlgo: "Active au moins un algorithme avant de lancer.",
+    scenarioTitle: "Scenario Simulator",
+    tutorialTitle: "Tutoriel",
+    problemDefTitle: "Definition du probleme",
+    algoLibTitle: "Bibliotheque d'algorithmes",
+    restartRun: "Relancer la competition",
+    startRun: "Lancer la competition",
+    stop: "Stop",
+    exportCsv: "Exporter CSV",
+    exportPdf: "Exporter PDF",
+    errorPrefix: "Erreur",
+    leaderboardTitle: "Classement",
+    radarTitle: "Comparaison Radar",
+    competitionGridTitle: "Grille de competition",
+    researchChartsTitle: "Graphiques de recherche",
+    languageFr: "Francais",
+    languageEn: "English"
+  },
+  en: {
+    subtitle: "Real-time benchmarking for multi-objective optimization algorithms",
+    themeLight: "Light Theme",
+    themeDark: "Dark Theme",
+    tabBenchmark: "Benchmark",
+    tabScenario: "Scenario Simulator",
+    tabTutorial: "Tutorial",
+    errorNoAlgo: "Enable at least one algorithm before starting.",
+    scenarioTitle: "Scenario Simulator",
+    tutorialTitle: "Tutorial",
+    problemDefTitle: "Problem Definition",
+    algoLibTitle: "Algorithm Library",
+    restartRun: "Restart Competition",
+    startRun: "Start Competition",
+    stop: "Stop",
+    exportCsv: "Export CSV",
+    exportPdf: "Export PDF",
+    errorPrefix: "Error",
+    leaderboardTitle: "Leaderboard",
+    radarTitle: "Radar Comparison",
+    competitionGridTitle: "Competition Grid",
+    researchChartsTitle: "Common Research Charts",
+    languageFr: "Francais",
+    languageEn: "English"
+  }
+};
+
+const extractFilename = (contentDisposition: string | null, fallback: string): string => {
+  if (!contentDisposition) {
+    return fallback;
+  }
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch (_) {
+      return utf8Match[1].trim();
+    }
+  }
+  const plainMatch = contentDisposition.match(/filename="?([^\";]+)"?/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1].trim();
+  }
+  return fallback;
+};
+
+const triggerBlobDownload = (fileName: string, blob: Blob): void => {
+  const blobUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = blobUrl;
+  anchor.download = fileName;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+};
+
+const exportRun = async (runId: string, kind: "csv" | "pdf"): Promise<void> => {
   const url = buildApiUrl(`/api/runs/${runId}/export/${kind}`);
-  window.open(url, "_blank", "noopener,noreferrer");
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Export failed with status ${response.status}`);
+    }
+    const fallbackName = `run-${runId}.${kind}`;
+    const fileName = extractFilename(response.headers.get("content-disposition"), fallbackName);
+    const blob = await response.blob();
+    triggerBlobDownload(fileName, blob);
+  } catch (error) {
+    console.error("Unable to export run, falling back to direct navigation.", error);
+    window.location.assign(url);
+  }
 };
 
 export default function App() {
@@ -39,7 +164,9 @@ export default function App() {
     snapshotsByAlgorithm,
     algorithmNameById,
     theme,
-    toggleTheme
+    toggleTheme,
+    language,
+    setLanguage
   } = useAppStore(
     useShallow((state) => ({
       tab: state.tab,
@@ -58,9 +185,13 @@ export default function App() {
       snapshotsByAlgorithm: state.snapshotsByAlgorithm,
       algorithmNameById: state.algorithmNameById,
       theme: state.theme,
-      toggleTheme: state.toggleTheme
+      toggleTheme: state.toggleTheme,
+      language: state.language,
+      setLanguage: state.setLanguage
     }))
   );
+
+  const t = uiText[language];
 
   const { startRun, stopRun } = useRunSocket();
   const revisionRef = useRef(configRevision);
@@ -85,11 +216,11 @@ export default function App() {
   const beginRun = useCallback(() => {
     const payload = buildRunPayload();
     if (!payload.algorithms.length) {
-      useAppStore.getState().setSocketError("Enable at least one algorithm before starting.");
+      useAppStore.getState().setSocketError(t.errorNoAlgo);
       return;
     }
     startRun(payload);
-  }, [startRun]);
+  }, [startRun, t.errorNoAlgo]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -132,50 +263,58 @@ export default function App() {
             <img src="/logo.png" alt="AlgoArena logo" className="h-10 w-10 rounded-lg object-cover ring-1 ring-stroke" />
             <div>
               <h1 className="font-display text-2xl tracking-tight">AlgoArena</h1>
-              <p className="text-xs text-slate">Real-time benchmarking for multi-objective optimization algorithms</p>
+              <p className="text-xs text-slate">{t.subtitle}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-stroke bg-card/60 p-1 text-xs">
+            <select
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as UiLanguage)}
+              className="rounded-lg border border-stroke bg-card px-2 py-2 text-slate"
+            >
+              <option value="fr">{t.languageFr}</option>
+              <option value="en">{t.languageEn}</option>
+            </select>
             <button
               type="button"
               onClick={toggleTheme}
               className="rounded-lg border border-stroke px-3 py-2 text-slate"
             >
-              {theme === "dark" ? "Light Theme" : "Dark Theme"}
+              {theme === "dark" ? t.themeLight : t.themeDark}
             </button>
             <button
               type="button"
               onClick={() => setTab("benchmark")}
               className={`rounded-lg px-3 py-2 ${tab === "benchmark" ? "bg-accent text-ink" : "text-slate"}`}
             >
-              Benchmark
+              {t.tabBenchmark}
             </button>
             <button
               type="button"
               onClick={() => setTab("scenario")}
               className={`rounded-lg px-3 py-2 ${tab === "scenario" ? "bg-accent text-ink" : "text-slate"}`}
             >
-              Scenario Simulator
+              {t.tabScenario}
             </button>
             <button
               type="button"
               onClick={() => setTab("tutorial")}
               className={`rounded-lg px-3 py-2 ${tab === "tutorial" ? "bg-accent text-ink" : "text-slate"}`}
             >
-              Tutorial
+              {t.tabTutorial}
             </button>
           </div>
         </header>
 
         <main className="mx-auto w-full max-w-[1500px] space-y-4 px-4 pb-8 md:px-6">
           {tab === "scenario" && (
-            <ErrorBoundary title="Scenario Simulator">
+            <ErrorBoundary title={t.scenarioTitle}>
               <ScenarioTab />
             </ErrorBoundary>
           )}
 
           {tab === "tutorial" && (
-            <ErrorBoundary title="Tutorial">
+            <ErrorBoundary title={t.tutorialTitle}>
               <TutorialTab />
             </ErrorBoundary>
           )}
@@ -184,10 +323,10 @@ export default function App() {
             <>
               <section className="grid gap-4 xl:grid-cols-[1.1fr_1.2fr]">
                 <div className="space-y-4">
-                  <ErrorBoundary title="Problem Definition">
+                  <ErrorBoundary title={t.problemDefTitle}>
                     <ProblemConfigPanel problems={problems} />
                   </ErrorBoundary>
-                  <ErrorBoundary title="Algorithm Library">
+                  <ErrorBoundary title={t.algoLibTitle}>
                     <AlgorithmConfigPanel specs={algorithmSpecs} refreshAlgorithms={refreshAlgorithms} />
                   </ErrorBoundary>
                 </div>
@@ -200,50 +339,58 @@ export default function App() {
                         onClick={beginRun}
                         className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink"
                       >
-                        {isRunning ? "Restart Run" : "Start Competition"}
+                        {isRunning ? t.restartRun : t.startRun}
                       </button>
                       <button
                         type="button"
                         onClick={stopRun}
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate"
                       >
-                        Stop
+                        {t.stop}
                       </button>
                       <button
                         type="button"
                         disabled={!runId}
-                        onClick={() => runId && exportRun(runId, "csv")}
+                        onClick={() => {
+                          if (runId) {
+                            void exportRun(runId, "csv");
+                          }
+                        }}
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
                       >
-                        Export CSV
+                        {t.exportCsv}
                       </button>
                       <button
                         type="button"
                         disabled={!runId}
-                        onClick={() => runId && exportRun(runId, "pdf")}
+                        onClick={() => {
+                          if (runId) {
+                            void exportRun(runId, "pdf");
+                          }
+                        }}
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
                       >
-                        Export PDF
+                        {t.exportPdf}
                       </button>
                     </div>
-                    {socketError && <p className="mt-3 text-xs text-rose-300">Error: {socketError}</p>}
+                    {socketError && <p className="mt-3 text-xs text-rose-300">{t.errorPrefix}: {socketError}</p>}
                   </section>
 
                   <MetricPins />
                   <ReplayControls maxGeneration={replayMax} />
-                  <ErrorBoundary title="Leaderboard">
+                  <ErrorBoundary title={t.leaderboardTitle}>
                     <Leaderboard entries={leaderboard} />
                   </ErrorBoundary>
-                  <ErrorBoundary title="Radar Comparison">
+                  <ErrorBoundary title={t.radarTitle}>
                     <RadarSummary summary={runSummary} leaderboard={leaderboard} isRunning={isRunning} />
                   </ErrorBoundary>
                 </div>
               </section>
 
-              <ErrorBoundary title="Competition Grid">
+              <ErrorBoundary title={t.competitionGridTitle}>
                 <AlgorithmComparisonGrid objectiveCount={problemConfig.n_obj ?? 2} />
               </ErrorBoundary>
-              <ErrorBoundary title="Common Research Charts">
+              <ErrorBoundary title={t.researchChartsTitle}>
                 <CommonResearchPanel
                   objectiveCount={problemConfig.n_obj ?? 2}
                   snapshotsByAlgorithm={snapshotsByAlgorithm}
