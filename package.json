@@ -32,7 +32,7 @@
       "GUIDE_COMPLET_FR.md"
     ],
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "desktop/assets/icon.ico",
       "target": [
         "nsis"
       ]
@@ -40,9 +40,9 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
+      "installerIcon": "desktop/assets/icon.ico",
+      "uninstallerIcon": "desktop/assets/icon.ico",
+      "installerHeaderIcon": "desktop/assets/icon.ico"
     }
   }
 }
