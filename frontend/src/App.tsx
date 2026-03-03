@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlgorithmConfigPanel } from "./components/AlgorithmConfigPanel";
 import { AlgorithmComparisonGrid } from "./components/AlgorithmComparisonGrid";
 import { CommonResearchPanel } from "./components/CommonResearchPanel";
@@ -13,6 +13,7 @@ import { TutorialTab } from "./components/TutorialTab";
 import { useRunSocket } from "./hooks/useRunSocket";
 import { buildApiUrl } from "./lib/api";
 import { buildRunPayload, useAppStore } from "./store/useAppStore";
+import type { DesktopStartupInfo } from "./types/desktopBridge";
 import type { AlgorithmSpec, ProblemSpec } from "./types";
 import { useShallow } from "zustand/react/shallow";
 
@@ -147,6 +148,7 @@ const exportRun = async (runId: string, kind: "csv" | "pdf"): Promise<void> => {
 };
 
 export default function App() {
+  const [startupInfo, setStartupInfo] = useState<DesktopStartupInfo | null>(null);
   const {
     tab,
     setTab,
@@ -241,6 +243,21 @@ export default function App() {
     document.body.classList.toggle("theme-light", theme === "light");
   }, [theme]);
 
+  useEffect(() => {
+    const onStartupInfo = window.algoarenaDesktop?.onStartupInfo;
+    if (!onStartupInfo) {
+      return;
+    }
+    const unsubscribe = onStartupInfo((payload) => {
+      setStartupInfo(payload);
+    });
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   const replayMax = useMemo(() => {
     let maxGeneration = 0;
     Object.values(snapshotsByAlgorithm).forEach((rows) => {
@@ -254,6 +271,32 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-panel text-ice">
+      {startupInfo && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4">
+          <div className="mt-8 w-full max-w-2xl rounded-xl border border-stroke bg-card shadow-glow">
+            <div className="flex items-start gap-3 p-4">
+              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-accent">
+                i
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-lg font-semibold text-ice">{startupInfo.message}</p>
+                <p className="text-sm text-slate">Local app URL: {startupInfo.localUrl}</p>
+                <p className="text-sm text-slate">API docs URL: {startupInfo.docsUrl}</p>
+                {startupInfo.note && <p className="pt-1 text-sm text-slate">{startupInfo.note}</p>}
+              </div>
+            </div>
+            <div className="flex justify-end border-t border-stroke px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setStartupInfo(null)}
+                className="rounded-md border border-accent px-4 py-1.5 text-sm text-ice"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -left-44 top-[-8rem] h-80 w-80 rounded-full bg-accent/20 blur-3xl" />
         <div className="pointer-events-none absolute right-[-9rem] top-20 h-72 w-72 rounded-full bg-ember/20 blur-3xl" />

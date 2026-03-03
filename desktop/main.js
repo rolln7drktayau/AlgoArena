@@ -247,7 +247,7 @@ async function stopBackend() {
   }
 }
 
-function createWindow(appRoot) {
+function createWindow(appRoot, startupInfo = null) {
   const distLogo = path.join(appRoot, "frontend", "dist", "logo.png");
   const publicLogo = path.join(appRoot, "frontend", "public", "logo.png");
   const iconPath = fs.existsSync(distLogo) ? distLogo : publicLogo;
@@ -296,6 +296,12 @@ function createWindow(appRoot) {
     }
   });
 
+  win.webContents.once("did-finish-load", () => {
+    if (startupInfo) {
+      win.webContents.send("algoarena:startup-info", startupInfo);
+    }
+  });
+
   win.loadURL("http://127.0.0.1:8000");
 }
 
@@ -337,20 +343,13 @@ app.whenReady().then(async () => {
     return;
   }
 
-  await dialog.showMessageBox({
-    type: "info",
+  createWindow(appRoot, {
     title: "AlgoArena Desktop",
     message: "AlgoArena is ready.",
-    detail:
-      "Local app URL: http://127.0.0.1:8000\n" +
-      "API docs URL: http://127.0.0.1:8000/docs\n\n" +
-      "Close this message to open the desktop window.",
-    buttons: ["OK"],
-    defaultId: 0,
-    noLink: true
+    localUrl: "http://127.0.0.1:8000",
+    docsUrl: "http://127.0.0.1:8000/docs",
+    note: "Close this message to open the desktop window."
   });
-
-  createWindow(appRoot);
 });
 
 app.on("window-all-closed", () => {
