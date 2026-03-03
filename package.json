@@ -22,7 +22,7 @@
   "build": {
     "appId": "com.algoarena.desktop",
     "productName": "AlgoArena Desktop",
-    "icon": "desktop/assets/icon.ico",
+    "icon": "desktop/assets/icon-taskbar.ico",
     "asar": false,
     "directories": {
       "output": "dist-electron"
@@ -43,7 +43,7 @@
       "main": "desktop/main.js"
     },
     "win": {
-      "icon": "desktop/assets/icon.ico",
+      "icon": "desktop/assets/icon-taskbar.ico",
       "target": [
         "nsis"
       ]
@@ -67,9 +67,9 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "desktop/assets/icon.ico",
-      "uninstallerIcon": "desktop/assets/icon.ico",
-      "installerHeaderIcon": "desktop/assets/icon.ico"
+      "installerIcon": "desktop/assets/icon-taskbar.ico",
+      "uninstallerIcon": "desktop/assets/icon-taskbar.ico",
+      "installerHeaderIcon": "desktop/assets/icon-taskbar.ico"
     }
   }
 }

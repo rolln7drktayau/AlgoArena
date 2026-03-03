@@ -188,10 +188,16 @@ A GitHub Actions workflow builds installers on Windows/Linux/macOS and uploads a
 Branding sources and exports are stored in:
 
 - `assets/branding/logo-main.svg`
+- `assets/branding/logo-variant-b.svg`
 - `assets/branding/logo-monochrome.svg`
 - `assets/branding/logo-wordmark.svg`
+- `assets/branding/logo-variant-b.png`
 - `assets/branding/logo-wordmark.png`
 - `assets/branding/logo-monochrome.png`
+
+Desktop/taskbar icon (optimized for small sizes):
+
+- `desktop/assets/icon-taskbar.ico`
 
 To regenerate production icon files used by the app and installer:
 

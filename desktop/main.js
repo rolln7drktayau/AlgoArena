@@ -284,9 +284,17 @@ async function stopBackend() {
 }
 
 function createWindow(appRoot, startupInfo = null) {
+  const desktopTaskbarIcon = path.join(appRoot, "desktop", "assets", "icon-taskbar.ico");
+  const desktopLegacyIcon = path.join(appRoot, "desktop", "assets", "icon.ico");
   const distLogo = path.join(appRoot, "frontend", "dist", "logo.png");
   const publicLogo = path.join(appRoot, "frontend", "public", "logo.png");
-  const iconPath = fs.existsSync(distLogo) ? distLogo : publicLogo;
+  const iconPath = fs.existsSync(desktopTaskbarIcon)
+    ? desktopTaskbarIcon
+    : fs.existsSync(desktopLegacyIcon)
+      ? desktopLegacyIcon
+      : fs.existsSync(distLogo)
+        ? distLogo
+        : publicLogo;
 
   const win = new BrowserWindow({
     width: 1480,
