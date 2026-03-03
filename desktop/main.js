@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog } = require("electron");
 const { spawn } = require("child_process");
+const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -10,18 +11,123 @@ function resolveAppRoot() {
   return app.isPackaged ? path.join(process.resourcesPath, "app") : path.resolve(__dirname, "..");
 }
 
-function resolvePythonCommand(appRoot) {
+function resolveRuntimeRoot() {
+  const runtimeRoot = path.join(app.getPath("userData"), "runtime");
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  return runtimeRoot;
+}
+
+function resolvePythonBootstrapCommand(appRoot) {
   const envPath = process.env.ALGOARENA_PYTHON;
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
 
-  const venvPython = path.join(appRoot, ".venv", "Scripts", "python.exe");
-  if (fs.existsSync(venvPython)) {
-    return venvPython;
+  const localVenv = path.join(appRoot, ".venv", "Scripts", "python.exe");
+  if (fs.existsSync(localVenv)) {
+    return localVenv;
   }
 
   return process.platform === "win32" ? "python" : "python3";
+}
+
+function resolveRuntimeVenvPython(runtimeRoot) {
+  return path.join(runtimeRoot, ".venv", "Scripts", "python.exe");
+}
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env ?? process.env,
+      windowsHide: true,
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    if (child.stdout) {
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+    }
+    if (child.stderr) {
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+    }
+
+    child.on("error", (error) => reject(error));
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(
+          new Error(
+            [
+              `Command failed (${code}): ${command} ${args.join(" ")}`,
+              stderr.trim(),
+              stdout.trim()
+            ]
+              .filter(Boolean)
+              .join("\n")
+          )
+        );
+      }
+    });
+  });
+}
+
+function hashFileSha256(filePath) {
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+async function ensureDesktopRuntime(appRoot) {
+  const runtimeRoot = resolveRuntimeRoot();
+  const bootstrapPython = resolvePythonBootstrapCommand(appRoot);
+  const runtimePython = resolveRuntimeVenvPython(runtimeRoot);
+  const requirementsPath = path.join(appRoot, "backend", "requirements.txt");
+  const requirementsHash = hashFileSha256(requirementsPath);
+  const stampPath = path.join(runtimeRoot, "requirements.sha256");
+
+  await runCommand(bootstrapPython, ["--version"], { cwd: appRoot }).catch(() => {
+    throw new Error(
+      "Python introuvable. Installe Python 3.11+ ou definis ALGOARENA_PYTHON vers python.exe."
+    );
+  });
+
+  if (!fs.existsSync(runtimePython)) {
+    await runCommand(bootstrapPython, ["-m", "venv", path.join(runtimeRoot, ".venv")], { cwd: appRoot });
+  }
+
+  let mustInstallDeps = true;
+  if (fs.existsSync(stampPath)) {
+    const current = fs.readFileSync(stampPath, "utf8").trim();
+    mustInstallDeps = current !== requirementsHash;
+  }
+
+  if (!mustInstallDeps) {
+    try {
+      await runCommand(
+        runtimePython,
+        ["-c", "import fastapi,uvicorn,numpy,pandas,pymoo,deap,reportlab,httpx"],
+        { cwd: appRoot }
+      );
+    } catch (_) {
+      mustInstallDeps = true;
+    }
+  }
+
+  if (mustInstallDeps) {
+    await runCommand(runtimePython, ["-m", "pip", "install", "--upgrade", "pip"], { cwd: appRoot });
+    await runCommand(runtimePython, ["-m", "pip", "install", "-r", requirementsPath], { cwd: appRoot });
+    fs.writeFileSync(stampPath, requirementsHash, "utf8");
+  }
+
+  return { runtimeRoot, runtimePython };
 }
 
 function checkBackendHealth(timeoutMs = 1200) {
@@ -40,7 +146,7 @@ function checkBackendHealth(timeoutMs = 1200) {
   });
 }
 
-async function waitForBackendReady(timeoutMs = 20000) {
+async function waitForBackendReady(timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const healthy = await checkBackendHealth();
@@ -52,12 +158,9 @@ async function waitForBackendReady(timeoutMs = 20000) {
   return false;
 }
 
-function startBackend() {
-  const appRoot = resolveAppRoot();
-  const pythonCmd = resolvePythonCommand(appRoot);
-
+function startBackend(appRoot, runtime) {
   backendProcess = spawn(
-    pythonCmd,
+    runtime.runtimePython,
     ["-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", "8000"],
     {
       cwd: appRoot,
@@ -65,7 +168,8 @@ function startBackend() {
       stdio: "ignore",
       env: {
         ...process.env,
-        PYTHONPATH: appRoot
+        PYTHONPATH: appRoot,
+        ALGOARENA_RUNTIME_ROOT: runtime.runtimeRoot
       }
     }
   );
@@ -74,31 +178,39 @@ function startBackend() {
     await dialog.showMessageBox({
       type: "error",
       title: "AlgoArena Desktop",
-      message: "Unable to start backend service.",
-      detail:
-        `${String(error)}\n\n` +
-        "Checks:\n" +
-        "- Python installed\n" +
-        "- backend deps installed in .venv\n" +
-        "- frontend/dist built\n" +
-        "- Optionally set ALGOARENA_PYTHON to a valid python.exe path"
+      message: "Impossible de demarrer le backend.",
+      detail: String(error)
     });
   });
 }
 
-function stopBackend() {
+async function stopBackend() {
   if (!backendProcess) return;
-  try {
-    backendProcess.kill();
-  } catch (_) {
-    // noop
-  }
+  const pid = backendProcess.pid;
   backendProcess = null;
+
+  if (!pid) return;
+
+  if (process.platform === "win32") {
+    try {
+      await runCommand("taskkill", ["/PID", String(pid), "/T", "/F"]);
+    } catch (_) {
+      // no-op
+    }
+    return;
+  }
+
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch (_) {
+    // no-op
+  }
 }
 
-function createWindow() {
-  const appRoot = resolveAppRoot();
-  const iconPath = path.join(appRoot, "frontend", "dist", "logo.png");
+function createWindow(appRoot) {
+  const distLogo = path.join(appRoot, "frontend", "dist", "logo.png");
+  const publicLogo = path.join(appRoot, "frontend", "public", "logo.png");
+  const iconPath = fs.existsSync(distLogo) ? distLogo : publicLogo;
 
   const win = new BrowserWindow({
     width: 1480,
@@ -122,7 +234,23 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  startBackend();
+  const appRoot = resolveAppRoot();
+
+  let runtime;
+  try {
+    runtime = await ensureDesktopRuntime(appRoot);
+  } catch (error) {
+    await dialog.showMessageBox({
+      type: "error",
+      title: "AlgoArena Desktop",
+      message: "Preparation automatique echouee.",
+      detail: String(error)
+    });
+    app.quit();
+    return;
+  }
+
+  startBackend(appRoot, runtime);
   const ready = await waitForBackendReady();
 
   if (!ready) {
@@ -131,14 +259,16 @@ app.whenReady().then(async () => {
       title: "AlgoArena Desktop",
       message: "Backend did not become ready on http://127.0.0.1:8000.",
       detail:
-        "Run once in terminal to prepare environment:\n" +
+        "AlgoArena a tente la preparation automatiquement.\n" +
+        "Si le probleme persiste, lance une fois:\n" +
         "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_windows.ps1"
     });
+    await stopBackend();
     app.quit();
     return;
   }
 
-  createWindow();
+  createWindow(appRoot);
 });
 
 app.on("window-all-closed", () => {
@@ -147,6 +277,6 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => {
-  stopBackend();
+app.on("before-quit", async () => {
+  await stopBackend();
 });
