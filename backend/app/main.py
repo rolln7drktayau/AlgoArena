@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
 from .api.routes import router as api_router
@@ -23,6 +26,13 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+FRONTEND_ASSETS = FRONTEND_DIST / "assets"
+
+if FRONTEND_ASSETS.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_ASSETS)), name="frontend-assets")
 
 
 @app.websocket("/ws/run")
@@ -109,3 +119,26 @@ async def ws_scenario(websocket: WebSocket) -> None:
             await websocket.close(code=1011)
         except Exception:
             pass
+
+
+@app.get("/", include_in_schema=False)
+async def spa_index() -> FileResponse:
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Frontend build not found. Build frontend/dist first.")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str) -> FileResponse:
+    if full_path.startswith(("api/", "docs", "openapi.json", "redoc", "ws/")):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    target = FRONTEND_DIST / full_path
+    if target.exists() and target.is_file():
+        return FileResponse(target)
+
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="Frontend build not found. Build frontend/dist first.")

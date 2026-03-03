@@ -99,6 +99,26 @@ npm run dev
 - Backend API: `http://localhost:8000`
 - OpenAPI docs: `http://localhost:8000/docs`
 
+## Deploy Online (Professor Demo Branch)
+
+Use branch `web/prof-demo` to host a public demo URL with one service (FastAPI + built React SPA).
+
+### What this branch adds
+
+- A root `Dockerfile` that builds the frontend and runs the backend.
+- FastAPI serves `frontend/dist` in production (same domain for API + WebSocket).
+- `render.yaml` for Render Blueprint deployment.
+
+### Deploy on Render
+
+1. Push branch `web/prof-demo` to GitHub.
+2. In Render: `New` -> `Blueprint`.
+3. Connect your repo and choose branch `web/prof-demo`.
+4. Confirm service creation from `render.yaml`.
+5. Wait for build/deploy, then open the generated URL.
+
+The app and backend are served together, so the WebSocket endpoints (`/ws/run`, `/ws/scenario`) work directly from the same domain.
+
 ## One-Command Startup Scripts
 
 ### Windows (PowerShell)
