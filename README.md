@@ -73,6 +73,10 @@ If `workflow_id` is omitted, simulation uses manual/synthetic tasks.
 
 ## Run Locally
 
+Detailed French tutorial:
+
+- [GUIDE_COMPLET_FR.md](./GUIDE_COMPLET_FR.md)
+
 ### Backend
 
 ```bash
@@ -131,12 +135,28 @@ Optional:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -SkipInstall
+powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -WebFirst
 ```
 
 You can also use:
 
 ```bat
 .\scripts\start_windows.bat
+```
+
+Windows launcher can show native toast notifications and can run in web-first mode (`-WebFirst`) by starting a Cloudflare Quick Tunnel when `cloudflared` is installed.
+
+### Build Windows EXE Launcher
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1
+```
+
+Then run:
+
+```powershell
+.\dist\AlgoArenaLauncher.exe
+.\dist\AlgoArenaLauncher.exe -WebFirst
 ```
 
 ### WSL / Linux

@@ -1,6 +1,10 @@
 AlgoArena - Quick Start Commands
 ===============================
 
+Complete step-by-step tutorial (FR):
+------------------------------------
+See: GUIDE_COMPLET_FR.md
+
 Windows PowerShell (manual)
 ---------------------------
 cd E:\AlgoArena
@@ -19,6 +23,19 @@ npm run dev
 Windows PowerShell (one command)
 --------------------------------
 powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1
+
+Windows PowerShell (web-first + toasts)
+---------------------------------------
+powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -WebFirst
+
+Build Windows EXE launcher
+--------------------------
+powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1
+
+Run EXE launcher
+----------------
+.\dist\AlgoArenaLauncher.exe
+.\dist\AlgoArenaLauncher.exe -WebFirst
 
 WSL / Linux (manual)
 --------------------
