@@ -167,8 +167,6 @@ def register_expression_problem(
 ) -> str:
     if not objectives:
         raise ValueError("At least one objective expression is required.")
-    if len(objectives) > 5:
-        raise ValueError("At most 5 objectives are supported.")
 
     problem_id = f"expr_{uuid4().hex}"
 

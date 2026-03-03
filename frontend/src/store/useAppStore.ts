@@ -176,7 +176,7 @@ export const useAppStore = create<AppState>((set) => ({
   algorithmSpecs: [],
   algorithms: [],
   problems: [],
-  problemConfig: { kind: "builtin", name: "ZDT1", n_var: 30, n_obj: 2, xl: 0, xu: 1 },
+  problemConfig: { kind: "builtin", name: "DTLZ2", n_var: 30, n_obj: 4, xl: 0, xu: 1 },
   snapshotsByAlgorithm: {},
   algorithmNameById: {},
   leaderboard: [],
@@ -382,7 +382,7 @@ export const useAppStore = create<AppState>((set) => ({
 
 export const buildRunPayload = () => {
   const state = useAppStore.getState();
-  const objectiveCount = state.problemConfig.n_obj ?? 2;
+  const objectiveCount = state.problemConfig.n_obj ?? 4;
   return {
     problem: state.problemConfig,
     algorithms: state.algorithms

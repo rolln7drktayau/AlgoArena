@@ -53,6 +53,7 @@ DEFAULT_OBJECTIVES: tuple[ObjectiveSpec, ...] = (
     ObjectiveSpec(name="Latency", key="latency", direction="min"),
     ObjectiveSpec(name="Cost", key="cost", direction="min"),
     ObjectiveSpec(name="Energy", key="energy", direction="min"),
+    ObjectiveSpec(name="Makespan", key="makespan", direction="min"),
 )
 BUILTIN_OBJECTIVE_KEYS = {"latency", "cost", "energy", "makespan", "execution_speed", "avg_wait"}
 
@@ -399,8 +400,8 @@ def _objective_specs_from_request(request: ScenarioRequest) -> tuple[list[Object
             if item.target is not None:
                 targets[name] = float(item.target)
 
-        if len(specs) < 2 or len(specs) > 5:
-            raise ValueError("Scenario objectives must contain between 2 and 5 objectives.")
+        if len(specs) < 2:
+            raise ValueError("Scenario objectives must contain at least 2 objectives.")
         return specs, targets
 
     specs = [ObjectiveSpec(name=spec.name, key=spec.key, direction=spec.direction) for spec in DEFAULT_OBJECTIVES]
@@ -411,7 +412,7 @@ def _objective_specs_from_request(request: ScenarioRequest) -> tuple[list[Object
         cleaned = [item.strip() for item in request.objective_names if item and item.strip()]
         if len(cleaned) >= 2:
             specs = []
-            for index, name in enumerate(cleaned[:5]):
+            for index, name in enumerate(cleaned):
                 resolved = _resolve_objective_key(name)
                 fallback = None
                 if resolved is None and index < len(DEFAULT_OBJECTIVES):

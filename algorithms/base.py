@@ -24,7 +24,7 @@ class PopulationSnapshot:
 class BaseAlgorithm(ABC):
     display_name: str = "BaseAlgorithm"
     hyperparam_schema: dict[str, dict[str, Any]] = {}
-    supported_n_obj: tuple[int, int] = (2, 5)
+    supported_n_obj: tuple[int, int | None] = (2, None)
 
     def __init__(self, problem: Any, hyperparams: dict[str, Any] | None = None):
         self.problem = problem
@@ -32,9 +32,13 @@ class BaseAlgorithm(ABC):
         n_obj = getattr(problem, "n_obj", None)
         if n_obj is not None:
             min_obj, max_obj = self.supported_n_obj
-            if int(n_obj) < min_obj or int(n_obj) > max_obj:
+            if int(n_obj) < min_obj or (max_obj is not None and int(n_obj) > max_obj):
+                if max_obj is None:
+                    range_label = f"[{min_obj}, +inf)"
+                else:
+                    range_label = f"[{min_obj}, {max_obj}]"
                 raise ValueError(
-                    f"{self.display_name} supports objective counts in [{min_obj}, {max_obj}], received n_obj={n_obj}."
+                    f"{self.display_name} supports objective counts in {range_label}, received n_obj={n_obj}."
                 )
 
     @abstractmethod

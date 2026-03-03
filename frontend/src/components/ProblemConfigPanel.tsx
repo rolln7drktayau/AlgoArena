@@ -51,8 +51,8 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
-    if (objectives.length < 2 || objectives.length > 5) {
-      setProblemFeedback("Use 2 to 5 objective expressions.");
+    if (objectives.length < 2) {
+      setProblemFeedback("Use at least 2 objective expressions.");
       return;
     }
 
@@ -96,7 +96,7 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
     formData.append("name", uploadName);
     formData.append("function_name", functionName);
     formData.append("n_var", String(problemConfig.n_var ?? 10));
-    formData.append("n_obj", String(problemConfig.n_obj ?? 2));
+    formData.append("n_obj", String(problemConfig.n_obj ?? 4));
     formData.append("xl", String(problemConfig.xl ?? 0));
     formData.append("xu", String(problemConfig.xu ?? 1));
 
@@ -148,9 +148,8 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
           <input
             type="number"
             min={2}
-            max={5}
             className="mt-1 w-full rounded-md border border-stroke bg-ink px-2 py-1 text-ice"
-            value={problemConfig.n_obj ?? 2}
+            value={problemConfig.n_obj ?? 4}
             onChange={(event) => setProblemConfig({ n_obj: Number(event.target.value) })}
           />
         </label>

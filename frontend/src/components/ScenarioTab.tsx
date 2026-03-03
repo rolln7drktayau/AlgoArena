@@ -37,7 +37,8 @@ const objectiveCatalog: Array<{ key: string; label: string; defaultDirection: "m
 const createDefaultObjectiveRows = (): ObjectiveRow[] => [
   { id: "obj-latency", name: "Latency", key: "latency", direction: "min", target: "", expression: "" },
   { id: "obj-cost", name: "Cost", key: "cost", direction: "min", target: "", expression: "" },
-  { id: "obj-energy", name: "Energy", key: "energy", direction: "min", target: "", expression: "" }
+  { id: "obj-energy", name: "Energy", key: "energy", direction: "min", target: "", expression: "" },
+  { id: "obj-makespan", name: "Makespan", key: "makespan", direction: "min", target: "", expression: "" }
 ];
 
 const defaultRows: EnvRow[] = [
@@ -385,11 +386,6 @@ export const ScenarioTab = () => {
       .filter((row) => row.name.length > 0);
     if (normalizedRows.length < 2) {
       setFeedback("Simulation failed: define at least two objectives.");
-      setIsLoading(false);
-      return;
-    }
-    if (normalizedRows.length > 5) {
-      setFeedback("Simulation failed: maximum 5 objectives are supported.");
       setIsLoading(false);
       return;
     }
@@ -921,7 +917,7 @@ export const ScenarioTab = () => {
         <div className="mt-4 rounded-lg border border-stroke bg-ink/50 p-3">
           <h4 className="font-display text-sm text-ice">Objectives (Manual)</h4>
           <p className="mt-1 text-[11px] text-slate">
-            Configure 2 to 5 objectives. Built-ins include latency, cost, energy, makespan, and execution speed.
+            Configure at least 2 objectives (default: 4). Built-ins include latency, cost, energy, makespan, and execution speed.
             You can also define expression-based objectives.
           </p>
           <div className="mt-3 space-y-2">
@@ -1027,7 +1023,6 @@ export const ScenarioTab = () => {
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={objectiveRows.length >= 5}
               onClick={() =>
                 setObjectiveRows((prev) => [
                   ...prev,

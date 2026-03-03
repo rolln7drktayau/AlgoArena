@@ -25,8 +25,8 @@ class ProblemConfig(BaseModel):
     @field_validator("n_obj")
     @classmethod
     def validate_obj_count(cls, value: int | None) -> int | None:
-        if value is not None and not (2 <= value <= 5):
-            raise ValueError("n_obj must be between 2 and 5")
+        if value is not None and value < 2:
+            raise ValueError("n_obj must be >= 2")
         return value
 
 
@@ -101,7 +101,7 @@ class ScenarioRequest(BaseModel):
     generations: int = 50
     repetitions: int = 1
     base_seed: int | None = None
-    objective_names: list[str] = Field(default_factory=lambda: ["Latency", "Cost", "Energy"])
+    objective_names: list[str] = Field(default_factory=lambda: ["Latency", "Cost", "Energy", "Makespan"])
     objective_targets: dict[str, float] | None = None
     objective_specs: list[ScenarioObjectiveSpec] | None = None
     workflow_id: str | None = None
@@ -111,8 +111,8 @@ class ScenarioRequest(BaseModel):
     @classmethod
     def validate_objective_names(cls, value: list[str]) -> list[str]:
         cleaned = [item.strip() for item in value if item and item.strip()]
-        if cleaned and not (2 <= len(cleaned) <= 5):
-            raise ValueError("objective_names must contain between 2 and 5 names.")
+        if cleaned and len(cleaned) < 2:
+            raise ValueError("objective_names must contain at least 2 names.")
         return cleaned
 
     @field_validator("objective_specs")
@@ -120,8 +120,8 @@ class ScenarioRequest(BaseModel):
     def validate_objective_specs(cls, value: list[ScenarioObjectiveSpec] | None) -> list[ScenarioObjectiveSpec] | None:
         if value is None:
             return value
-        if not (2 <= len(value) <= 5):
-            raise ValueError("objective_specs must contain between 2 and 5 objective entries.")
+        if len(value) < 2:
+            raise ValueError("objective_specs must contain at least 2 objective entries.")
         return value
 
     @field_validator("workflow_task_limit")

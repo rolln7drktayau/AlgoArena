@@ -430,11 +430,11 @@ export default function App() {
               </section>
 
               <ErrorBoundary title={t.competitionGridTitle}>
-                <AlgorithmComparisonGrid objectiveCount={problemConfig.n_obj ?? 2} />
+                <AlgorithmComparisonGrid objectiveCount={problemConfig.n_obj ?? 4} />
               </ErrorBoundary>
               <ErrorBoundary title={t.researchChartsTitle}>
                 <CommonResearchPanel
-                  objectiveCount={problemConfig.n_obj ?? 2}
+                  objectiveCount={problemConfig.n_obj ?? 4}
                   snapshotsByAlgorithm={snapshotsByAlgorithm}
                   algorithmNameById={algorithmNameById}
                 />
