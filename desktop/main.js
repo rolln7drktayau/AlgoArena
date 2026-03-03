@@ -57,16 +57,31 @@ function resolvePythonBootstrapCommand(appRoot) {
     return envPath;
   }
 
-  const localVenv = path.join(appRoot, ".venv", "Scripts", "python.exe");
-  if (fs.existsSync(localVenv)) {
-    return localVenv;
+  const localVenvWin = path.join(appRoot, ".venv", "Scripts", "python.exe");
+  const localVenvPosix = path.join(appRoot, ".venv", "bin", "python3");
+  const localVenvPosixAlt = path.join(appRoot, ".venv", "bin", "python");
+  if (fs.existsSync(localVenvWin)) {
+    return localVenvWin;
+  }
+  if (fs.existsSync(localVenvPosix)) {
+    return localVenvPosix;
+  }
+  if (fs.existsSync(localVenvPosixAlt)) {
+    return localVenvPosixAlt;
   }
 
   return process.platform === "win32" ? "python" : "python3";
 }
 
 function resolveRuntimeVenvPython(runtimeRoot) {
-  return path.join(runtimeRoot, ".venv", "Scripts", "python.exe");
+  if (process.platform === "win32") {
+    return path.join(runtimeRoot, ".venv", "Scripts", "python.exe");
+  }
+  const py3 = path.join(runtimeRoot, ".venv", "bin", "python3");
+  if (fs.existsSync(py3)) {
+    return py3;
+  }
+  return path.join(runtimeRoot, ".venv", "bin", "python");
 }
 
 function runCommand(command, args, options = {}) {

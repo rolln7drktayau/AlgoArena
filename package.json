@@ -9,7 +9,11 @@
   "scripts": {
     "desktop:prepare": "npm --prefix frontend run build",
     "desktop:dev": "npm run desktop:prepare && electron .",
-    "desktop:dist:win": "npm run desktop:prepare && electron-builder --win nsis"
+    "dist": "npm run desktop:prepare && electron-builder",
+    "dist:win": "npm run desktop:prepare && electron-builder --win nsis",
+    "dist:linux": "npm run desktop:prepare && electron-builder --linux deb rpm",
+    "dist:mac": "npm run desktop:prepare && electron-builder --mac dmg",
+    "desktop:dist:win": "npm run dist:win"
   },
   "devDependencies": {
     "electron": "^39.2.7",
@@ -18,6 +22,7 @@
   "build": {
     "appId": "com.algoarena.desktop",
     "productName": "AlgoArena Desktop",
+    "icon": "desktop/assets/icon.ico",
     "asar": false,
     "directories": {
       "output": "dist-electron"
@@ -34,11 +39,30 @@
       "QUICK_START_COMMANDS.txt",
       "GUIDE_COMPLET_FR.md"
     ],
+    "extraMetadata": {
+      "main": "desktop/main.js"
+    },
     "win": {
       "icon": "desktop/assets/icon.ico",
       "target": [
         "nsis"
       ]
+    },
+    "linux": {
+      "target": [
+        "deb",
+        "rpm"
+      ],
+      "category": "Utility",
+      "maintainer": "AST & RCT <support@algoarena.local>",
+      "icon": "desktop/assets/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "desktop/assets/icon.png"
     },
     "nsis": {
       "oneClick": false,

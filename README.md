@@ -167,6 +167,19 @@ npm install
 npm run desktop:dist:win
 ```
 
+Paige-style packaging commands are also available:
+
+```powershell
+npm run dist
+npm run dist:win
+npm run dist:linux
+npm run dist:mac
+```
+
+A GitHub Actions workflow builds installers on Windows/Linux/macOS and uploads artifacts:
+
+- [build.yml](./.github/workflows/build.yml)
+
 ### Build Windows EXE Launcher
 
 ```powershell

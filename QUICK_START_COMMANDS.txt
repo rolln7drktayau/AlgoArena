@@ -34,6 +34,13 @@ Desktop EXE build (Electron)
 npm install
 npm run desktop:dist:win
 
+Packaging (Paige-style commands)
+--------------------------------
+npm run dist
+npm run dist:win
+npm run dist:linux
+npm run dist:mac
+
 Build Windows EXE launcher
 --------------------------
 powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1
