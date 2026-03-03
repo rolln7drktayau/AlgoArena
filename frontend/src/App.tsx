@@ -272,24 +272,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-panel text-ice">
       {startupInfo && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4">
-          <div className="mt-8 w-full max-w-2xl rounded-xl border border-stroke bg-card shadow-glow">
-            <div className="flex items-start gap-3 p-4">
-              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-accent">
+        <div className="pointer-events-none fixed right-4 top-4 z-[60] w-full max-w-md md:right-6 md:top-6">
+          <div className="pointer-events-auto rounded-xl border border-stroke bg-card/95 p-4 shadow-glow backdrop-blur">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent">
                 i
               </div>
-              <div className="flex-1 space-y-2">
-                <p className="text-lg font-semibold text-ice">{startupInfo.message}</p>
-                <p className="text-sm text-slate">Local app URL: {startupInfo.localUrl}</p>
-                <p className="text-sm text-slate">API docs URL: {startupInfo.docsUrl}</p>
-                {startupInfo.note && <p className="pt-1 text-sm text-slate">{startupInfo.note}</p>}
+              <div className="flex-1 space-y-1">
+                <p className="text-base font-semibold text-ice">{startupInfo.message}</p>
+                <p className="text-xs text-slate">Local app URL: {startupInfo.localUrl}</p>
+                <p className="text-xs text-slate">API docs URL: {startupInfo.docsUrl}</p>
+                {startupInfo.note && <p className="pt-1 text-xs text-slate">{startupInfo.note}</p>}
               </div>
-            </div>
-            <div className="flex justify-end border-t border-stroke px-4 py-3">
               <button
                 type="button"
+                aria-label="Close startup message"
                 onClick={() => setStartupInfo(null)}
-                className="rounded-md border border-accent px-4 py-1.5 text-sm text-ice"
+                className="rounded-md border border-stroke px-2 py-0.5 text-xs text-slate hover:bg-panel"
               >
                 OK
               </button>
