@@ -142,8 +142,8 @@ const exportRun = async (runId: string, kind: "csv" | "pdf"): Promise<void> => {
     const blob = await response.blob();
     triggerBlobDownload(fileName, blob);
   } catch (error) {
-    console.error("Unable to export run, falling back to direct navigation.", error);
-    window.location.assign(url);
+    console.error("Unable to export run.", error);
+    useAppStore.getState().setSocketError("Export failed. Please retry once the run is completed.");
   }
 };
 

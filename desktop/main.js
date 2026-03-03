@@ -8,6 +8,27 @@ const http = require("http");
 let backendProcess = null;
 let backendLogPath = null;
 
+function sanitizeFileName(fileName) {
+  const fallback = "algoarena-export.bin";
+  if (!fileName || typeof fileName !== "string") {
+    return fallback;
+  }
+  const sanitized = fileName.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_").trim();
+  return sanitized || fallback;
+}
+
+function buildUniqueDownloadPath(downloadsDir, fileName) {
+  const safeName = sanitizeFileName(fileName);
+  const parsed = path.parse(path.join(downloadsDir, safeName));
+  let candidate = path.join(parsed.dir, `${parsed.name}${parsed.ext}`);
+  let index = 1;
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(parsed.dir, `${parsed.name} (${index})${parsed.ext}`);
+    index += 1;
+  }
+  return candidate;
+}
+
 function isBackendExportUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
@@ -270,6 +291,20 @@ function createWindow(appRoot, startupInfo = null) {
   });
 
   win.setMenuBarVisibility(false);
+  const session = win.webContents.session;
+  const onWillDownload = (event, item, webContents) => {
+    if (webContents !== win.webContents) {
+      return;
+    }
+    const downloadDir = app.getPath("downloads");
+    const savePath = buildUniqueDownloadPath(downloadDir, item.getFilename());
+    item.setSavePath(savePath);
+  };
+  session.on("will-download", onWillDownload);
+  win.on("closed", () => {
+    session.removeListener("will-download", onWillDownload);
+  });
+
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (isBackendExportUrl(url)) {
       win.webContents.downloadURL(url);

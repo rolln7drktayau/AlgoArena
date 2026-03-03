@@ -1,4 +1,4 @@
-const RAW_API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const RAW_API_BASE = (import.meta.env.VITE_API_URL ?? "").trim();
 const DEV_BACKEND_FALLBACK = "http://127.0.0.1:8000";
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
@@ -6,10 +6,26 @@ const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 const stripApiSuffix = (value: string): string => value.replace(/\/api$/i, "");
 
 const resolveOrigin = (): string => {
-  if (typeof window !== "undefined" && window.location?.origin) {
+  if (
+    typeof window !== "undefined" &&
+    window.location?.origin &&
+    window.location.origin !== "null" &&
+    /^https?:/i.test(window.location.origin)
+  ) {
     return window.location.origin;
   }
   return DEV_BACKEND_FALLBACK;
+};
+
+const resolveHttpBase = (): string => {
+  let configured = trimTrailingSlash(RAW_API_BASE);
+  if (!configured) {
+    return trimTrailingSlash(resolveOrigin());
+  }
+  if (configured.startsWith("/")) {
+    configured = `${trimTrailingSlash(resolveOrigin())}${configured}`;
+  }
+  return configured;
 };
 
 const normalizePath = (path: string): string => {
@@ -21,10 +37,7 @@ const normalizePath = (path: string): string => {
 
 export const buildApiUrl = (path: string): string => {
   const normalizedPath = normalizePath(path);
-  let base = trimTrailingSlash(RAW_API_BASE);
-  if (base.startsWith("/")) {
-    base = `${trimTrailingSlash(resolveOrigin())}${base}`;
-  }
+  const base = resolveHttpBase();
   const baseHasApi = /\/api$/i.test(base);
 
   if (baseHasApi && normalizedPath.startsWith("/api/")) {
@@ -40,10 +53,7 @@ export const buildApiUrl = (path: string): string => {
 };
 
 export const buildWsUrl = (path: string): string => {
-  let httpBase = trimTrailingSlash(stripApiSuffix(RAW_API_BASE));
-  if (httpBase.startsWith("/")) {
-    httpBase = `${trimTrailingSlash(resolveOrigin())}${httpBase}`;
-  }
+  const httpBase = trimTrailingSlash(stripApiSuffix(resolveHttpBase()));
   const wsBase = httpBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
   return `${wsBase}${normalizePath(path)}`;
 };
