@@ -41,6 +41,10 @@ npm run dist:win
 npm run dist:linux
 npm run dist:mac
 
+Regenerate AlgoArena branding assets
+------------------------------------
+python .\scripts\generate_brand_assets.py
+
 Build Windows EXE launcher
 --------------------------
 powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1

@@ -1,0 +1,10 @@
+<svg width="2400" height="600" viewBox="0 0 2400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(100, 100) scale(0.4)">
+    <path d="M512 180L815 355V705L512 880L209 705V355L512 180Z" stroke="#3B82F6" stroke-width="40" stroke-linejoin="round"/>
+    <path d="M320 680C320 680 380 450 700 380" stroke="#2DD4BF" stroke-width="45" stroke-linecap="round"/>
+    <circle cx="320" cy="680" r="35" fill="#F59E0B"/>
+    <circle cx="700" cy="380" r="35" fill="#2DD4BF"/>
+  </g>
+  <text x="550" y="380" font-family="Arial, sans-serif" font-weight="bold" font-size="280" fill="#0B1220">AlgoArena</text>
+  <text x="560" y="480" font-family="Arial, sans-serif" font-size="60" fill="#3B82F6" letter-spacing="5">BENCHMARKING &amp; OPTIMIZATION</text>
+</svg>

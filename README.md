@@ -3,6 +3,9 @@
 <p align="left">
   <img src="./frontend/public/logo.png" alt="AlgoArena logo" width="96" />
 </p>
+<p align="left">
+  <img src="./assets/branding/logo-wordmark.png" alt="AlgoArena wordmark" width="420" />
+</p>
 
 AlgoArena is a full-stack single-page application for benchmarking and visually comparing multi-objective optimization algorithms in real time.
 
@@ -179,6 +182,22 @@ npm run dist:mac
 A GitHub Actions workflow builds installers on Windows/Linux/macOS and uploads artifacts:
 
 - [build.yml](./.github/workflows/build.yml)
+
+### Branding Assets (Logo Pack)
+
+Branding sources and exports are stored in:
+
+- `assets/branding/logo-main.svg`
+- `assets/branding/logo-monochrome.svg`
+- `assets/branding/logo-wordmark.svg`
+- `assets/branding/logo-wordmark.png`
+- `assets/branding/logo-monochrome.png`
+
+To regenerate production icon files used by the app and installer:
+
+```powershell
+python scripts/generate_brand_assets.py
+```
 
 ### Build Windows EXE Launcher
 
