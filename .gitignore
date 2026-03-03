@@ -71,6 +71,7 @@ tmp/
 temp/
 *.tmp
 *.pid
+/logo.png
 
 # Test / report exports
 reports/
