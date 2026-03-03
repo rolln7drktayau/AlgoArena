@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -95,6 +96,14 @@ async def ws_scenario(websocket: WebSocket) -> None:
             loop.call_soon_threadsafe(queue.put_nowait, event)
 
         worker_task = asyncio.create_task(asyncio.to_thread(simulate_scenario_stream, scenario_request, on_update))
+        last_keepalive_at = time.monotonic()
+        keepalive_interval_sec = 10.0
+        last_progress = {
+            "total_algorithms": len(scenario_request.algorithms),
+            "completed_algorithms": 0,
+            "total_steps": len(scenario_request.algorithms) * max(1, scenario_request.repetitions),
+            "completed_steps": 0,
+        }
 
         while True:
             if worker_task.done() and queue.empty():
@@ -102,9 +111,41 @@ async def ws_scenario(websocket: WebSocket) -> None:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=0.15)
             except asyncio.TimeoutError:
+                now = time.monotonic()
+                if now - last_keepalive_at >= keepalive_interval_sec:
+                    await websocket.send_json(
+                        {
+                            "type": "scenario_keepalive",
+                            "run_id": run_id,
+                            "total_algorithms": last_progress["total_algorithms"],
+                            "completed_algorithms": last_progress["completed_algorithms"],
+                            "total_steps": last_progress["total_steps"],
+                            "completed_steps": last_progress["completed_steps"],
+                        }
+                    )
+                    last_keepalive_at = now
                 await asyncio.sleep(0)
                 continue
+
+            if "total_algorithms" in event:
+                total_algorithms = event.get("total_algorithms")
+                if isinstance(total_algorithms, int):
+                    last_progress["total_algorithms"] = total_algorithms
+            if "completed_algorithms" in event:
+                completed_algorithms = event.get("completed_algorithms")
+                if isinstance(completed_algorithms, int):
+                    last_progress["completed_algorithms"] = completed_algorithms
+            if "total_steps" in event:
+                total_steps = event.get("total_steps")
+                if isinstance(total_steps, int):
+                    last_progress["total_steps"] = total_steps
+            if "completed_steps" in event:
+                completed_steps = event.get("completed_steps")
+                if isinstance(completed_steps, int):
+                    last_progress["completed_steps"] = completed_steps
+
             await websocket.send_json(event)
+            last_keepalive_at = time.monotonic()
 
         await worker_task
         await websocket.close(code=1000)

@@ -218,7 +218,7 @@ export default function App() {
                     <Leaderboard entries={leaderboard} />
                   </ErrorBoundary>
                   <ErrorBoundary title="Radar Comparison">
-                    <RadarSummary summary={runSummary} />
+                    <RadarSummary summary={runSummary} leaderboard={leaderboard} isRunning={isRunning} />
                   </ErrorBoundary>
                 </div>
               </section>

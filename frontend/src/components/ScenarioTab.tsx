@@ -176,9 +176,44 @@ type ScenarioStreamMessage =
       payload?: ScenarioResponse;
     }
   | {
+      type: "scenario_keepalive";
+      run_id: string;
+      total_algorithms?: number;
+      completed_algorithms?: number;
+      total_steps?: number;
+      completed_steps?: number;
+    }
+  | {
       type: "error";
       error: string;
     };
+
+const isRenderHosted = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return window.location.hostname.endsWith("onrender.com");
+};
+
+const summarizeServerError = (raw: string): string => {
+  const text = raw.trim();
+  if (!text) {
+    return "Unexpected server error.";
+  }
+  if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+    return "Gateway error (502): the hosted backend is temporarily unavailable or overloaded. Reduce workload and retry.";
+  }
+  try {
+    const parsed = JSON.parse(text) as { detail?: string };
+    if (typeof parsed.detail === "string" && parsed.detail.trim().length > 0) {
+      return parsed.detail.trim();
+    }
+  } catch {
+    // Ignore parse failures and continue with plain text fallback.
+  }
+  const noTags = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return noTags.length > 240 ? `${noTags.slice(0, 240)}...` : noTags;
+};
 
 export const ScenarioTab = () => {
   const allAlgorithms = useAppStore((state) => state.algorithms);
@@ -188,9 +223,9 @@ export const ScenarioTab = () => {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState("");
   const [workflowTaskLimit, setWorkflowTaskLimit] = useState<number | "">("");
   const [workflowLoadError, setWorkflowLoadError] = useState<string | null>(null);
-  const [populationSize, setPopulationSize] = useState(80);
-  const [generations, setGenerations] = useState(50);
-  const [repetitions, setRepetitions] = useState(5);
+  const [populationSize, setPopulationSize] = useState(60);
+  const [generations, setGenerations] = useState(30);
+  const [repetitions, setRepetitions] = useState(2);
   const [baseSeed, setBaseSeed] = useState<number | "">(42);
   const [results, setResults] = useState<ScenarioResult[]>([]);
   const [resultObjectiveNames, setResultObjectiveNames] = useState<string[]>([]);
@@ -376,6 +411,14 @@ export const ScenarioTab = () => {
     const normalizedRepetitions = Math.max(1, Math.min(30, Number(repetitions)));
     const normalizedBaseSeed =
       baseSeed === "" || Number.isNaN(Number(baseSeed)) ? undefined : Math.trunc(Number(baseSeed));
+    const workloadScore = compatibleAlgorithms.length * normalizedRepetitions * Math.max(1, generations) * Math.max(1, populationSize);
+    if (isRenderHosted() && workloadScore > 60_000) {
+      setFeedback(
+        "Simulation cancelled: workload is too high for hosted mode. Reduce algorithms, repetitions, generations, or population size."
+      );
+      setIsLoading(false);
+      return;
+    }
     setStreamProgress({
       completed: 0,
       total: compatibleAlgorithms.length,
@@ -407,17 +450,19 @@ export const ScenarioTab = () => {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail);
+        throw new Error(summarizeServerError(detail));
       }
       const data = (await response.json()) as ScenarioResponse;
       applyScenarioResponse(data, compatibleAlgorithms);
     };
 
+    let streamEverStarted = false;
     const runViaStream = () =>
-      new Promise<void>((resolve, reject) => {
+      new Promise<{ started: boolean }>((resolve, reject) => {
         const ws = new WebSocket(buildWsUrl("/ws/scenario"));
         streamSocketRef.current = ws;
         let settled = false;
+        let started = false;
 
         const finish = (ok: boolean, errorMessage?: string) => {
           if (settled) {
@@ -425,7 +470,7 @@ export const ScenarioTab = () => {
           }
           settled = true;
           if (ok) {
-            resolve();
+            resolve({ started });
             return;
           }
           reject(new Error(errorMessage ?? "Scenario stream failed."));
@@ -444,6 +489,8 @@ export const ScenarioTab = () => {
           try {
             const message = JSON.parse(event.data) as ScenarioStreamMessage;
             if (message.type === "scenario_started") {
+              started = true;
+              streamEverStarted = true;
               setResultObjectiveNames(message.objective_names ?? []);
               setResultObjectiveTargets(message.objective_targets ?? {});
               setResultObjectiveDirections(message.objective_directions ?? {});
@@ -459,6 +506,10 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
                 } repetitions complete.`
               );
+              return;
+            }
+
+            if (message.type === "scenario_keepalive") {
               return;
             }
 
@@ -612,10 +663,33 @@ export const ScenarioTab = () => {
     try {
       await runViaStream();
     } catch (streamError) {
+      const streamMessage = streamError instanceof Error ? streamError.message : "unknown stream error";
+      if (streamEverStarted) {
+        setFeedback(
+          `Simulation stream interrupted: ${streamMessage}. Try again with a smaller workload (fewer algorithms/repetitions).`
+        );
+        return;
+      }
       try {
-        await runViaHttpFallback(streamError instanceof Error ? streamError.message : "unknown stream error");
+        const firstTry = await runViaStream();
+        if (firstTry.started) {
+          return;
+        }
+      } catch {
+        // Ignore retry errors and continue fallback decision.
+      }
+
+      if (isRenderHosted()) {
+        setFeedback(
+          `Simulation failed: ${streamMessage}. Hosted backend may be overloaded. Reduce workload and retry.`
+        );
+        return;
+      }
+      try {
+        await runViaHttpFallback(streamMessage);
       } catch (httpError) {
-        setFeedback(`Simulation failed: ${httpError instanceof Error ? httpError.message : "Unexpected error"}`);
+        const message = httpError instanceof Error ? httpError.message : "Unexpected error";
+        setFeedback(`Simulation failed: ${summarizeServerError(message)}`);
       }
     } finally {
       setIsLoading(false);
