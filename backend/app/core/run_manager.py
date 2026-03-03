@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,30 @@ from problems.registry import build_reference_front, create_problem
 
 from .metrics import build_diversity_heatmap, compute_metrics
 from .models import RunRequest
+
+
+def _env_int(name: str) -> int | None:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def _cap_hyperparam(hyperparams: dict[str, Any], key: str, cap: int | None) -> None:
+    if cap is None:
+        return
+    raw = hyperparams.get(key)
+    if raw is None:
+        return
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError):
+        return
+    hyperparams[key] = min(parsed, cap)
 
 
 @dataclass
@@ -66,9 +91,20 @@ class RunManager:
 
         algorithm_instances: dict[str, Any] = {}
         active_algorithm_ids: set[str] = set()
+        max_algorithms = _env_int("ALGOARENA_MAX_ALGORITHMS")
+        max_population = _env_int("ALGOARENA_MAX_POPULATION")
+        max_generations = _env_int("ALGOARENA_MAX_GENERATIONS")
+        selected_algorithms = (
+            run_request.algorithms[: max_algorithms]
+            if max_algorithms is not None
+            else run_request.algorithms
+        )
 
-        for algo_cfg in run_request.algorithms:
-            algorithm = create_algorithm_instance(algo_cfg.name, problem, algo_cfg.hyperparams)
+        for algo_cfg in selected_algorithms:
+            safe_hyperparams = dict(algo_cfg.hyperparams or {})
+            _cap_hyperparam(safe_hyperparams, "population_size", max_population)
+            _cap_hyperparam(safe_hyperparams, "generations", max_generations)
+            algorithm = create_algorithm_instance(algo_cfg.name, problem, safe_hyperparams)
             algorithm_instances[algo_cfg.id] = algorithm
             active_algorithm_ids.add(algo_cfg.id)
             run_record.algorithms[algo_cfg.id] = AlgorithmRunRecord(algorithm_id=algo_cfg.id, name=algo_cfg.name)

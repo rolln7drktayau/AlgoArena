@@ -9,6 +9,7 @@ import { ProblemConfigPanel } from "./components/ProblemConfigPanel";
 import { RadarSummary } from "./components/RadarSummary";
 import { ReplayControls } from "./components/ReplayControls";
 import { ScenarioTab } from "./components/ScenarioTab";
+import { TutorialTab } from "./components/TutorialTab";
 import { useRunSocket } from "./hooks/useRunSocket";
 import { buildApiUrl } from "./lib/api";
 import { buildRunPayload, useAppStore } from "./store/useAppStore";
@@ -127,9 +128,12 @@ export default function App() {
         <div className="pointer-events-none absolute right-[-9rem] top-20 h-72 w-72 rounded-full bg-ember/20 blur-3xl" />
 
         <header className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center justify-between gap-4 px-4 py-5 md:px-6">
-          <div>
-            <h1 className="font-display text-2xl tracking-tight">AlgoArena</h1>
-            <p className="text-xs text-slate">Real-time benchmarking for multi-objective optimization algorithms</p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="AlgoArena logo" className="h-10 w-10 rounded-lg object-cover ring-1 ring-stroke" />
+            <div>
+              <h1 className="font-display text-2xl tracking-tight">AlgoArena</h1>
+              <p className="text-xs text-slate">Real-time benchmarking for multi-objective optimization algorithms</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-stroke bg-card/60 p-1 text-xs">
             <button
@@ -153,6 +157,13 @@ export default function App() {
             >
               Scenario Simulator
             </button>
+            <button
+              type="button"
+              onClick={() => setTab("tutorial")}
+              className={`rounded-lg px-3 py-2 ${tab === "tutorial" ? "bg-accent text-ink" : "text-slate"}`}
+            >
+              Tutorial
+            </button>
           </div>
         </header>
 
@@ -160,6 +171,12 @@ export default function App() {
           {tab === "scenario" && (
             <ErrorBoundary title="Scenario Simulator">
               <ScenarioTab />
+            </ErrorBoundary>
+          )}
+
+          {tab === "tutorial" && (
+            <ErrorBoundary title="Tutorial">
+              <TutorialTab />
             </ErrorBoundary>
           )}
 
@@ -218,7 +235,7 @@ export default function App() {
                     <Leaderboard entries={leaderboard} />
                   </ErrorBoundary>
                   <ErrorBoundary title="Radar Comparison">
-                    <RadarSummary summary={runSummary} />
+                    <RadarSummary summary={runSummary} leaderboard={leaderboard} isRunning={isRunning} />
                   </ErrorBoundary>
                 </div>
               </section>

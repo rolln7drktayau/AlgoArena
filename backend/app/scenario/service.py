@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import heapq
 import math
+import os
 import random
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -13,6 +14,17 @@ from algorithms.registry import create_algorithm_instance
 from ..core.metrics import compute_metrics
 from ..core.models import EnvironmentTier, ScenarioRequest, ScenarioTask
 from .workflows import load_workflow_tasks
+
+
+def _env_int(name: str) -> int | None:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
 
 @dataclass
@@ -695,8 +707,27 @@ def _simulate_scenario_internal(
 
         objective_specs, objective_targets = _objective_specs_from_request(request)
         problem = SchedulingProblem(tiers, tasks, objectives=objective_specs)
-        total_algorithms = len(request.algorithms)
+        max_algorithms = _env_int("ALGOARENA_MAX_ALGORITHMS")
+        max_population = _env_int("ALGOARENA_MAX_POPULATION")
+        max_generations = _env_int("ALGOARENA_MAX_GENERATIONS")
+        max_repetitions = _env_int("ALGOARENA_MAX_REPETITIONS")
+
+        algorithms = (
+            request.algorithms[: max_algorithms]
+            if max_algorithms is not None
+            else request.algorithms
+        )
+        population_size = max(5, int(request.population_size))
+        generations = max(1, int(request.generations))
         repetitions = max(1, int(request.repetitions))
+        if max_population is not None:
+            population_size = min(population_size, max_population)
+        if max_generations is not None:
+            generations = min(generations, max_generations)
+        if max_repetitions is not None:
+            repetitions = min(repetitions, max_repetitions)
+
+        total_algorithms = len(algorithms)
         total_steps = total_algorithms * repetitions
         completed_algorithms = 0
         completed_steps = 0
@@ -723,7 +754,7 @@ def _simulate_scenario_internal(
         algorithm_outputs = []
         failures: list[dict[str, str]] = []
         per_algorithm_repeat_outputs: dict[str, list[dict[str, Any]]] = {}
-        for algorithm_index, algorithm_name in enumerate(request.algorithms):
+        for algorithm_index, algorithm_name in enumerate(algorithms):
             successful_runs: list[dict[str, Any]] = []
             repeat_failures: list[dict[str, Any]] = []
 
@@ -736,8 +767,8 @@ def _simulate_scenario_internal(
                     output = _run_algorithm(
                         problem=problem,
                         algorithm_name=algorithm_name,
-                        population_size=request.population_size,
-                        generations=request.generations,
+                        population_size=population_size,
+                        generations=generations,
                         objective_specs=objective_specs,
                         objective_targets=objective_targets,
                         seed=run_seed,

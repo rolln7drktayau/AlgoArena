@@ -5,6 +5,13 @@ const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 
 const stripApiSuffix = (value: string): string => value.replace(/\/api$/i, "");
 
+const resolveOrigin = (): string => {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return DEV_BACKEND_FALLBACK;
+};
+
 const normalizePath = (path: string): string => {
   if (!path.startsWith("/")) {
     return `/${path}`;
@@ -16,7 +23,7 @@ export const buildApiUrl = (path: string): string => {
   const normalizedPath = normalizePath(path);
   let base = trimTrailingSlash(RAW_API_BASE);
   if (base.startsWith("/")) {
-    base = `${trimTrailingSlash(DEV_BACKEND_FALLBACK)}${base}`;
+    base = `${trimTrailingSlash(resolveOrigin())}${base}`;
   }
   const baseHasApi = /\/api$/i.test(base);
 
@@ -35,8 +42,8 @@ export const buildApiUrl = (path: string): string => {
 export const buildWsUrl = (path: string): string => {
   let httpBase = trimTrailingSlash(stripApiSuffix(RAW_API_BASE));
   if (httpBase.startsWith("/")) {
-    httpBase = trimTrailingSlash(stripApiSuffix(DEV_BACKEND_FALLBACK));
+    httpBase = `${trimTrailingSlash(resolveOrigin())}${httpBase}`;
   }
-  const wsBase = httpBase.replace(/^http/i, "ws");
+  const wsBase = httpBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
   return `${wsBase}${normalizePath(path)}`;
 };
