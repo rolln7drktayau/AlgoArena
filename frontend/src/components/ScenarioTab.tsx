@@ -80,6 +80,43 @@ const defaultRows: EnvRow[] = [
   }
 ];
 
+const scenarioPresets = {
+  quick: {
+    label: "Demo rapide",
+    description: "3 tiers, 10 taches, objectifs latence + cout.",
+    taskCount: 10,
+    generations: 12,
+    populationSize: 30,
+    rows: defaultRows.map((row) => ({ ...row, values: { ...row.values, devices: 3 } }))
+  },
+  medium: {
+    label: "Cas d'usage moyen",
+    description: "Configuration equilibree pour comparer plusieurs algorithmes sans attendre trop longtemps.",
+    taskCount: 30,
+    generations: 35,
+    populationSize: 70,
+    rows: defaultRows
+  },
+  stress: {
+    label: "Stress test",
+    description: "Plus de taches et plus de generations pour tester la robustesse.",
+    taskCount: 80,
+    generations: 80,
+    populationSize: 120,
+    rows: defaultRows.map((row) => ({ ...row, values: { ...row.values, devices: 8 } }))
+  }
+};
+
+const envColumns: Array<{ key: keyof ScenarioEnvironment; label: string; help: string }> = [
+  { key: "devices", label: "Appareils", help: "Nombre de machines disponibles dans ce niveau." },
+  { key: "processing_rate", label: "Vitesse (taches/s)", help: "Plus la vitesse est haute, plus les taches finissent vite." },
+  { key: "processing_cost", label: "Cout (EUR/tache)", help: "Cout moyen pour traiter une tache." },
+  { key: "idle_power", label: "Conso repos (W)", help: "Energie consommee quand le niveau attend." },
+  { key: "working_power", label: "Conso active (W)", help: "Energie consommee quand le niveau travaille." },
+  { key: "uplink_bandwidth", label: "Bande montante (Mbps)", help: "Debit pour envoyer les donnees vers le niveau suivant." },
+  { key: "downlink_bandwidth", label: "Bande descendante (Mbps)", help: "Debit pour recuperer les resultats." }
+];
+
 const makeSyntheticTasks = (count: number) =>
   Array.from({ length: count }).map((_, index) => ({
     id: `T${index + 1}`,
@@ -332,6 +369,17 @@ export const ScenarioTab = () => {
         rowIdx === idx ? { ...row, values: { ...row.values, [key]: Number.isFinite(value) ? value : 0 } } : row
       )
     );
+  };
+
+  const applyPreset = (preset: keyof typeof scenarioPresets) => {
+    const next = scenarioPresets[preset];
+    setRows(next.rows.map((row) => ({ ...row, values: { ...row.values } })));
+    setTaskCount(next.taskCount);
+    setGenerations(next.generations);
+    setPopulationSize(next.populationSize);
+    setSelectedWorkflowId("");
+    setWorkflowTaskLimit("");
+    setFeedback(next.description);
   };
 
   const clearScenarioRunState = useCallback(() => {
@@ -702,25 +750,52 @@ export const ScenarioTab = () => {
       <div className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
         <h2 className="font-display text-lg text-ice">Scenario Simulator (Edge/Fog/Cloud)</h2>
         <p className="mt-1 text-xs text-slate">
-          Define environment tiers, optionally load a scientific workflow preset, then compare scheduling plans.
+          Configure un environnement Edge/Fog/Cloud, choisis un preset, puis compare les plans de placement.
         </p>
         <p className="mt-1 text-[11px] text-slate">
           Workflows loaded: {workflowSpecs.length} {workflowFamilies.length > 0 && `(${workflowFamilies.join(", ")})`}
         </p>
         {workflowLoadError && <p className="mt-1 text-[11px] text-rose-300">{workflowLoadError}</p>}
 
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(Object.keys(scenarioPresets) as Array<keyof typeof scenarioPresets>).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => applyPreset(key)}
+              className="rounded-md border border-stroke bg-ink px-3 py-2 text-xs text-ice hover:border-accent"
+              title={scenarioPresets[key].description}
+            >
+              {scenarioPresets[key].label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-stroke bg-ink/50 p-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-ice">
+            {rows.map((row, idx) => (
+              <div key={row.name} className="flex items-center gap-3">
+                <div className="rounded-lg border border-stroke bg-card px-4 py-3 text-center">
+                  <div className="font-display">{row.name}</div>
+                  <div className="mt-1 text-xs text-accent">x{row.values.devices}</div>
+                </div>
+                {idx < rows.length - 1 && <span className="text-slate">-&gt;</span>}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-xs text-slate">Les fleches representent les transferts et la latence entre niveaux.</p>
+        </div>
+
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-xs text-slate">
             <thead>
               <tr className="border-b border-stroke text-[10px] uppercase tracking-wide">
-                <th className="px-2 py-2">Tier</th>
-                <th className="px-2 py-2">Devices</th>
-                <th className="px-2 py-2">Rate</th>
-                <th className="px-2 py-2">Cost</th>
-                <th className="px-2 py-2">Idle</th>
-                <th className="px-2 py-2">Working</th>
-                <th className="px-2 py-2">Up</th>
-                <th className="px-2 py-2">Down</th>
+                <th className="px-2 py-2">Niveau</th>
+                {envColumns.map((column) => (
+                  <th key={column.key} className="px-2 py-2" title={column.help}>
+                    {column.label} <span className="text-accent">?</span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -737,22 +812,12 @@ export const ScenarioTab = () => {
                       }
                     />
                   </td>
-                  {(
-                    [
-                      "devices",
-                      "processing_rate",
-                      "processing_cost",
-                      "idle_power",
-                      "working_power",
-                      "uplink_bandwidth",
-                      "downlink_bandwidth"
-                    ] as (keyof ScenarioEnvironment)[]
-                  ).map((key) => (
-                    <td key={key} className="px-2 py-2">
+                  {envColumns.map((column) => (
+                    <td key={column.key} className="px-2 py-2" title={column.help}>
                       <input
                         type="number"
-                        value={row.values[key]}
-                        onChange={(event) => updateEnv(index, key, Number(event.target.value))}
+                        value={row.values[column.key]}
+                        onChange={(event) => updateEnv(index, column.key, Number(event.target.value))}
                         className="w-20 rounded border border-stroke bg-ink px-1 py-1 text-ice"
                       />
                     </td>

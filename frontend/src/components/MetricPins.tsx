@@ -1,4 +1,5 @@
 import { useAppStore } from "../store/useAppStore";
+import { useProfileFilter } from "../hooks/useProfileFilter";
 
 const METRICS = [
   { key: "hv", label: "Hypervolume" },
@@ -16,21 +17,31 @@ const METRICS = [
 export const MetricPins = () => {
   const pinnedMetrics = useAppStore((state) => state.pinnedMetrics);
   const togglePinnedMetric = useAppStore((state) => state.togglePinnedMetric);
+  const { allowedMetrics, showMetricExplanations } = useProfileFilter();
+  const visibleMetrics = allowedMetrics ? METRICS.filter((metric) => allowedMetrics.includes(metric.key)) : METRICS;
 
   return (
     <section className="rounded-xl border border-stroke bg-card/70 p-3">
       <h3 className="font-display text-sm text-ice">Pinned Metrics</h3>
       <div className="mt-2 flex flex-wrap gap-3">
-        {METRICS.map((metric) => (
-          <label key={metric.key} className="flex items-center gap-2 text-xs text-slate">
-            <input
-              type="checkbox"
-              checked={pinnedMetrics.includes(metric.key)}
-              onChange={() => togglePinnedMetric(metric.key)}
-              className="h-4 w-4 accent-ember"
-            />
-            {metric.label}
-          </label>
+        {visibleMetrics.map((metric) => (
+          <div key={metric.key} className="rounded-lg border border-stroke/60 bg-ink/50 p-2">
+            <label className="flex items-center gap-2 text-xs text-slate">
+              <input
+                type="checkbox"
+                checked={pinnedMetrics.includes(metric.key)}
+                onChange={() => togglePinnedMetric(metric.key)}
+                className="h-4 w-4 accent-ember"
+              />
+              {metric.label}
+            </label>
+            {showMetricExplanations && metric.key === "hv" && (
+              <p className="mt-1 text-[11px] text-accent">Plus c'est grand, mieux c'est.</p>
+            )}
+            {showMetricExplanations && metric.key === "igd" && (
+              <p className="mt-1 text-[11px] text-accent">Plus c'est petit, plus l'algorithme est precis.</p>
+            )}
+          </div>
         ))}
       </div>
     </section>

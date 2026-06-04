@@ -11,6 +11,7 @@ import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, useS
 import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useMemo, useState } from "react";
 import { useAppStore, selectSnapshotForView } from "../store/useAppStore";
+import { useProfileFilter } from "../hooks/useProfileFilter";
 import { DiversityHeatmap } from "./DiversityHeatmap";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { MetricsChart } from "./MetricsChart";
@@ -85,6 +86,7 @@ export const AlgorithmComparisonGrid = ({ objectiveCount }: { objectiveCount: nu
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [visibleIds, setVisibleIds] = useState<string[]>([]);
+  const { allowedAlgorithms } = useProfileFilter();
   const text = language === "fr"
     ? {
         title: "Panneaux de competition cote a cote",
@@ -114,7 +116,10 @@ export const AlgorithmComparisonGrid = ({ objectiveCount }: { objectiveCount: nu
       coordinateGetter: sortableKeyboardCoordinates
     })
   );
-  const algorithms = useMemo(() => allAlgorithms.filter((algo) => algo.enabled), [allAlgorithms]);
+  const algorithms = useMemo(
+    () => allAlgorithms.filter((algo) => algo.enabled && (!allowedAlgorithms || allowedAlgorithms.includes(algo.name))),
+    [allAlgorithms, allowedAlgorithms]
+  );
   useEffect(() => {
     setVisibleIds((current) => {
       const enabledIds = algorithms.map((algo) => algo.id);

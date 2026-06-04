@@ -145,6 +145,24 @@ const cloneAlgorithm = (algorithm: AlgorithmConfig, variantNumber: number): Algo
   hyperparams: { ...algorithm.hyperparams }
 });
 
+const allowedAlgorithmsForProfile = (profile: UserProfile | null): string[] | null => {
+  if (profile === "student") {
+    return ["NSGA-II", "NSGA-III", "Random Search"];
+  }
+  if (profile === "curious") {
+    return ["NSGA-II", "MOEA/D", "Random Search"];
+  }
+  return null;
+};
+
+const applyProfileAlgorithmVisibility = (algorithms: AlgorithmConfig[], profile: UserProfile | null): AlgorithmConfig[] => {
+  const allowed = allowedAlgorithmsForProfile(profile);
+  if (!allowed) {
+    return algorithms.map((algorithm) => ({ ...algorithm, enabled: true }));
+  }
+  return algorithms.map((algorithm) => ({ ...algorithm, enabled: allowed.includes(algorithm.name) }));
+};
+
 const buildLabFromState = (state: AppState, title = "Untitled Lab"): LabDocument => {
   const now = new Date().toISOString();
   return {
@@ -231,7 +249,7 @@ const leaderboardEquals = (a: LeaderboardEntry[], b: LeaderboardEntry[]): boolea
 export const useAppStore = create<AppState>((set) => ({
   currentLab: null,
   userProfile: getInitialProfile(),
-  tab: "benchmark",
+  tab: getInitialProfile() === "curious" ? "explore" : "benchmark",
   algorithmSpecs: [],
   algorithms: [],
   problems: [],
@@ -330,6 +348,8 @@ export const useAppStore = create<AppState>((set) => ({
     persistProfile(profile);
     set((state) => ({
       userProfile: profile,
+      tab: profile === "curious" ? "explore" : state.tab,
+      algorithms: applyProfileAlgorithmVisibility(state.algorithms, profile),
       currentLab: state.currentLab
         ? { ...state.currentLab, profile, updated_at: new Date().toISOString() }
         : state.currentLab
@@ -358,7 +378,8 @@ export const useAppStore = create<AppState>((set) => ({
         };
       });
       const variants = state.algorithms.filter((algo) => specNames.has(algo.name) && algo.label);
-      return { algorithmSpecs: specs, algorithms: [...baseAlgorithms, ...variants] };
+      const algorithms = applyProfileAlgorithmVisibility([...baseAlgorithms, ...variants], state.userProfile);
+      return { algorithmSpecs: specs, algorithms };
     }),
 
   setProblems: (specs) => set({ problems: specs }),

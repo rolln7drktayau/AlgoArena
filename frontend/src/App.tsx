@@ -8,6 +8,7 @@ import { LabsPanel } from "./components/LabsPanel";
 import { MetricPins } from "./components/MetricPins";
 import { ProblemConfigPanel } from "./components/ProblemConfigPanel";
 import { ProfileSetup } from "./components/ProfileSetup";
+import { ProfileBadge } from "./components/ProfileBadge";
 import { RadarSummary } from "./components/RadarSummary";
 import { ReplayControls } from "./components/ReplayControls";
 import { ScenarioTab } from "./components/ScenarioTab";
@@ -15,6 +16,7 @@ import { SurpriseMeButton } from "./components/SurpriseMeButton";
 import { TutorialTab } from "./components/TutorialTab";
 import { V2ExploreTab } from "./components/V2ExploreTab";
 import { useRunSocket } from "./hooks/useRunSocket";
+import { useProfileFilter } from "./hooks/useProfileFilter";
 import { buildApiUrl } from "./lib/api";
 import { buildRunPayload, useAppStore } from "./store/useAppStore";
 import type { DesktopStartupInfo } from "./types/desktopBridge";
@@ -225,6 +227,8 @@ export default function App() {
   );
 
   const t = uiText[language];
+  const profileFilter = useProfileFilter();
+  const [showPlainExplanation, setShowPlainExplanation] = useState(false);
 
   const { startRun, stopRun } = useRunSocket();
   const revisionRef = useRef(configRevision);
@@ -349,6 +353,7 @@ export default function App() {
               <option value="fr">{t.languageFr}</option>
               <option value="en">{t.languageEn}</option>
             </select>
+            <ProfileBadge />
             <SurpriseMeButton />
             <button
               type="button"
@@ -409,24 +414,55 @@ export default function App() {
 
           {tab === "benchmark" && (
             <>
-              <LabsPanel />
-              <section className="grid gap-4 xl:grid-cols-[1.1fr_1.2fr]">
-                <div className="space-y-4">
-                  <ErrorBoundary title={t.problemDefTitle}>
-                    <ProblemConfigPanel problems={problems} />
-                  </ErrorBoundary>
-                  <ErrorBoundary title={t.algoLibTitle}>
-                    <AlgorithmConfigPanel specs={algorithmSpecs} refreshAlgorithms={refreshAlgorithms} />
-                  </ErrorBoundary>
-                </div>
+              {profileFilter.showStudentBanner && (
+                <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+                  Mode Etudiant : interface simplifiee. Passe en mode Chercheur pour acceder a tous les outils.
+                </section>
+              )}
+              {profileFilter.showResearcherBanner && (
+                <section className="rounded-xl border border-stroke bg-card/70 p-4 text-sm text-slate">
+                  Mode Chercheur : tous les outils disponibles.
+                </section>
+              )}
+              {profileFilter.showCuriousBanner && (
+                <section className="rounded-xl border border-accent/50 bg-accent/10 p-4">
+                  <p className="font-display text-lg text-ice">Pas besoin de tout comprendre.</p>
+                  <p className="mt-1 text-sm text-slate">Lance quelque chose et observe ce qui se passe.</p>
+                  <div className="mt-3">
+                    <SurpriseMeButton />
+                  </div>
+                </section>
+              )}
+              {profileFilter.showLabsFirst ? (
+                <LabsPanel />
+              ) : (
+                <details className="rounded-xl border border-stroke bg-card/60 p-3 text-xs text-slate">
+                  <summary className="cursor-pointer text-ice">Sauvegarder mes resultats</summary>
+                  <div className="mt-3">
+                    <LabsPanel />
+                  </div>
+                </details>
+              )}
+              <section className="grid gap-8 xl:grid-cols-2">
+                <ErrorBoundary title={t.problemDefTitle}>
+                  <ProblemConfigPanel problems={problems} />
+                </ErrorBoundary>
+                <ErrorBoundary title={t.algoLibTitle}>
+                  <AlgorithmConfigPanel specs={algorithmSpecs} refreshAlgorithms={refreshAlgorithms} />
+                </ErrorBoundary>
+              </section>
 
-                <div className="space-y-4">
+              <section className="grid gap-8 xl:grid-cols-[1fr_1.1fr]">
                   <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
+                    <div className="mb-4 space-y-1">
+                      <p className="text-sm font-bold text-ice">ETAPE 3</p>
+                      <p className="text-xs italic text-slate">Lance la competition puis regarde la convergence.</p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
                         onClick={beginRun}
-                        className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink"
+                        className="rounded-md bg-accent px-6 py-3 text-sm font-bold uppercase text-ink"
                       >
                         {isRunning ? t.restartRun : t.startRun}
                       </button>
@@ -461,7 +497,7 @@ export default function App() {
                       >
                         {t.exportPdf}
                       </button>
-                      <button
+                      {profileFilter.showAcademicExports && <button
                         type="button"
                         disabled={!runId}
                         onClick={() => {
@@ -472,15 +508,15 @@ export default function App() {
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
                       >
                         {t.exportLatex}
-                      </button>
-                      <button
+                      </button>}
+                      {profileFilter.showAcademicExports && <button
                         type="button"
                         onClick={() => void exportBibtex()}
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate"
                       >
                         {t.exportBibtex}
-                      </button>
-                      <button
+                      </button>}
+                      {profileFilter.showAcademicExports && <button
                         type="button"
                         disabled={!runId}
                         onClick={() => {
@@ -491,11 +527,29 @@ export default function App() {
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
                       >
                         {t.exportStats}
+                      </button>}
+                      <button
+                        type="button"
+                        onClick={() => setShowPlainExplanation((value) => !value)}
+                        className="rounded-md border border-accent/50 px-4 py-2 text-sm text-accent"
+                      >
+                        Que se passe-t-il ?
                       </button>
                     </div>
+                    {profileFilter.showStatTests && (
+                      <div className="mt-3 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">
+                        Repetitions et tests statistiques disponibles dans les exports : Wilcoxon, Kruskal-Wallis, intervalles de confiance.
+                      </div>
+                    )}
+                    {showPlainExplanation && (
+                      <div className="mt-3 rounded-lg border border-accent/30 bg-accent/10 p-3 text-xs leading-5 text-slate">
+                        L'app lance les memes problemes avec plusieurs algorithmes. Un bon algorithme fait monter HV, baisse IGD, et se stabilise sans rester bloque trop tot.
+                      </div>
+                    )}
                     {socketError && <p className="mt-3 text-xs text-rose-300">{t.errorPrefix}: {socketError}</p>}
                   </section>
 
+                <div className="space-y-4">
                   <MetricPins />
                   <ReplayControls maxGeneration={replayMax} />
                   <ErrorBoundary title={t.leaderboardTitle}>

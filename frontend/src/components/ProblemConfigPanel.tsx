@@ -1,12 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { buildApiUrl } from "../lib/api";
 import type { ProblemKind, ProblemSpec, WorkflowSpec } from "../types";
+import { useProfileFilter } from "../hooks/useProfileFilter";
 import { useAppStore } from "../store/useAppStore";
 
 export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) => {
   const problemConfig = useAppStore((state) => state.problemConfig);
   const setProblemConfig = useAppStore((state) => state.setProblemConfig);
   const setTab = useAppStore((state) => state.setTab);
+  const language = useAppStore((state) => state.language);
+  const { showCustomProblem, isCurious } = useProfileFilter();
   const [expressionText, setExpressionText] = useState("x[0]\n1.0 - np.sqrt(x[0])");
   const [customName, setCustomName] = useState("CustomExpressionProblem");
   const [uploadName, setUploadName] = useState("UploadedProblem");
@@ -15,10 +18,14 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
   const [problemFeedback, setProblemFeedback] = useState<string | null>(null);
   const [workflowSpecs, setWorkflowSpecs] = useState<WorkflowSpec[]>([]);
 
-  const builtinProblems = useMemo(
-    () => problems.filter((item) => item.kind === "builtin").map((item) => item.name),
-    [problems]
-  );
+  const builtinProblems = useMemo(() => {
+    const names = problems.filter((item) => item.kind === "builtin").map((item) => item.name);
+    if (!isCurious) {
+      return names;
+    }
+    const preferred = names.filter((name) => name === "ZDT1");
+    return preferred.length ? preferred : names.slice(0, 1);
+  }, [isCurious, problems]);
   const workflowFamilies = useMemo(
     () => Array.from(new Set(workflowSpecs.map((item) => item.family))).sort(),
     [workflowSpecs]
@@ -39,6 +46,12 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
     };
     void loadWorkflowSpecs();
   }, []);
+
+  useEffect(() => {
+    if (!showCustomProblem && problemConfig.kind !== "builtin") {
+      setProblemConfig({ kind: "builtin", name: isCurious ? "ZDT1" : problemConfig.name, problem_id: undefined });
+    }
+  }, [isCurious, problemConfig.kind, problemConfig.name, setProblemConfig, showCustomProblem]);
 
   const handleKindChange = (kind: ProblemKind) => {
     setProblemConfig({ kind, problem_id: undefined });
@@ -117,8 +130,13 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
   return (
     <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg text-ice">Problem Definition</h2>
-        <label className="text-xs text-slate">
+        <div>
+          <h2 className="text-lg font-bold text-ice">ETAPE 1 - {language === "fr" ? "Quel probleme ?" : "Which problem?"}</h2>
+          <p className="mt-1 text-xs italic text-slate">
+            {language === "fr" ? "Commence par un probleme simple, puis augmente la complexite." : "Start simple, then increase complexity."}
+          </p>
+        </div>
+        {showCustomProblem && <label className="text-xs text-slate">
           Kind
           <select
             className="ml-2 rounded-md border border-stroke bg-ink px-2 py-1 text-sm text-ice"
@@ -129,7 +147,7 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
             <option value="expression">Lambda/Expression</option>
             <option value="uploaded">Upload Python Function</option>
           </select>
-        </label>
+        </label>}
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -189,7 +207,7 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
         </label>
       )}
 
-      {problemConfig.kind === "expression" && (
+      {showCustomProblem && problemConfig.kind === "expression" && (
         <form className="space-y-3" onSubmit={registerExpressionProblem}>
           <label className="block text-xs text-slate">
             Custom problem name
@@ -214,7 +232,7 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
         </form>
       )}
 
-      {problemConfig.kind === "uploaded" && (
+      {showCustomProblem && problemConfig.kind === "uploaded" && (
         <form className="space-y-3" onSubmit={registerUploadedProblem}>
           <label className="block text-xs text-slate">
             Display name

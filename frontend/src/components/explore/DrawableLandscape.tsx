@@ -12,6 +12,7 @@ export const DrawableLandscape = () => {
   const [grid, setGrid] = useState(makeGrid());
   const [intensity, setIntensity] = useState(0.35);
   const [running, setRunning] = useState(false);
+  const [hasPainted, setHasPainted] = useState(false);
   const [points, setPoints] = useState<Array<{ x: number; y: number; best?: boolean }>>([]);
   const [best, setBest] = useState<{ x: number; y: number; score: number } | null>(null);
   const t = language === "fr"
@@ -23,6 +24,11 @@ export const DrawableLandscape = () => {
         simple: "Exemple : vallee simple",
         two: "Exemple : deux vallees",
         run: "Lancer la recherche",
+        runReady: "Lancer la recherche sur ce paysage",
+        emptyTitle: "Dessine ici",
+        emptyBody: "Peins des zones sombres. L'algorithme cherchera les zones les plus basses.",
+        legend: "Zones sombres = vallees (bon) | Zones claires = montagnes (mauvais)",
+        ready: "Ton paysage est pret. Lance la recherche pour voir l'algorithme explorer.",
         best: "Meilleur score",
         running: "L'algorithme explore les zones sombres.",
         done: "Termine : le meilleur point est marque."
@@ -35,6 +41,11 @@ export const DrawableLandscape = () => {
         simple: "Example: simple valley",
         two: "Example: two valleys",
         run: "Run search",
+        runReady: "Run search on this landscape",
+        emptyTitle: "Draw here",
+        emptyBody: "Paint dark zones. The algorithm will search for the lowest areas.",
+        legend: "Dark zones = valleys (good) | Light zones = mountains (bad)",
+        ready: "Your landscape is ready. Run the search to watch the algorithm explore.",
         best: "Best score",
         running: "The algorithm is exploring dark zones.",
         done: "Done: the best point is marked."
@@ -80,6 +91,7 @@ export const DrawableLandscape = () => {
         })
       )
     );
+    setHasPainted(true);
   };
 
   const loadValley = (two = false) => {
@@ -96,6 +108,7 @@ export const DrawableLandscape = () => {
     setGrid(next);
     setPoints([]);
     setBest(null);
+    setHasPainted(true);
   };
 
   const run = () => {
@@ -130,25 +143,43 @@ export const DrawableLandscape = () => {
     <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
       <h3 className="font-display text-base text-ice">{t.title}</h3>
       <p className="mt-1 text-xs text-slate">{running ? t.running : best ? t.done : t.body}</p>
-      <canvas
-        ref={canvasRef}
-        width={600}
-        height={400}
-        onMouseDown={(event) => paintAt(event.clientX, event.clientY)}
-        onMouseMove={(event) => {
-          if (event.buttons === 1) paintAt(event.clientX, event.clientY);
-        }}
-        className="mt-3 aspect-[3/2] w-full rounded-lg border border-stroke bg-ink"
-      />
+      <div className="relative mt-3">
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={400}
+          onMouseDown={(event) => paintAt(event.clientX, event.clientY)}
+          onMouseMove={(event) => {
+            if (event.buttons === 1) paintAt(event.clientX, event.clientY);
+          }}
+          className="aspect-[3/2] w-full cursor-crosshair rounded-lg border border-stroke bg-ink"
+        />
+        {!hasPainted && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-ice/10 text-center backdrop-blur-[1px]">
+            <div className="max-w-xs rounded-xl border border-stroke bg-card/85 p-5 shadow-glow">
+              <p className="font-display text-xl text-ice">{t.emptyTitle}</p>
+              <p className="mt-2 text-sm leading-6 text-slate">{t.emptyBody}</p>
+              <div className="mt-3 flex justify-center gap-2 text-xs">
+                <span className="rounded border border-stroke px-2 py-1 text-accent">{t.simple}</span>
+                <span className="rounded border border-stroke px-2 py-1 text-accent">{t.two}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-slate">{t.legend}</p>
+      {hasPainted && !running && !best && <p className="mt-2 text-xs text-accent">{t.ready}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <label className="flex items-center gap-2 text-slate">
           {t.intensity}
           <input type="range" min={0.05} max={0.8} step={0.05} value={intensity} onChange={(event) => setIntensity(Number(event.target.value))} />
         </label>
-        <button type="button" onClick={() => setGrid(makeGrid())} className="rounded border border-stroke px-3 py-2 text-slate">{t.clear}</button>
+        <button type="button" onClick={() => { setGrid(makeGrid()); setHasPainted(false); setPoints([]); setBest(null); }} className="rounded border border-stroke px-3 py-2 text-slate">{t.clear}</button>
         <button type="button" onClick={() => loadValley(false)} className="rounded border border-stroke px-3 py-2 text-slate">{t.simple}</button>
         <button type="button" onClick={() => loadValley(true)} className="rounded border border-stroke px-3 py-2 text-slate">{t.two}</button>
-        <button type="button" onClick={run} className="rounded bg-accent px-3 py-2 font-semibold text-ink">{t.run}</button>
+        <button type="button" onClick={run} className={`rounded bg-accent px-4 py-3 font-semibold text-ink ${hasPainted ? "animate-pulse" : ""}`}>
+          {hasPainted ? t.runReady : t.run}
+        </button>
         {best && <span className="text-accent">{t.best}: {best.score.toFixed(3)}</span>}
       </div>
     </section>
