@@ -283,6 +283,13 @@ export const ScenarioTab = () => {
         body: "Configure un environnement Edge/Fog/Cloud, choisis un preset, puis compare les plans de placement.",
         workflowsLoaded: "Workflows charges",
         transfers: "Les fleches representent les transferts et la latence entre niveaux.",
+        previewTitle: "Apercu de l'environnement",
+        previewHelp: "Clique sur un niveau pour voir ses valeurs. Les presets modifient les appareils, la population, les generations et le nombre de taches.",
+        speed: "vitesse",
+        cost: "cout",
+        energy: "energie",
+        activeTier: "Niveau selectionne",
+        currentSetup: "Configuration actuelle",
         manualTasks: "Taches synthetiques manuelles",
         workflowPreset: "Preset workflow",
         workflowTaskLimit: "Limite de taches workflow",
@@ -334,6 +341,13 @@ export const ScenarioTab = () => {
         body: "Configure an Edge/Fog/Cloud environment, choose a preset, then compare scheduling plans.",
         workflowsLoaded: "Workflows loaded",
         transfers: "Arrows represent transfers and latency between tiers.",
+        previewTitle: "Environment preview",
+        previewHelp: "Click a tier to inspect its values. Presets change devices, population, generations and task count.",
+        speed: "speed",
+        cost: "cost",
+        energy: "energy",
+        activeTier: "Selected tier",
+        currentSetup: "Current setup",
         manualTasks: "Manual synthetic tasks",
         workflowPreset: "Workflow preset",
         workflowTaskLimit: "Workflow task limit",
@@ -384,6 +398,8 @@ export const ScenarioTab = () => {
     () => workflowSpecs.find((item) => item.workflow_id === selectedWorkflowId) ?? null,
     [selectedWorkflowId, workflowSpecs]
   );
+  const [selectedTierIndex, setSelectedTierIndex] = useState(0);
+  const selectedTier = rows[Math.min(selectedTierIndex, Math.max(0, rows.length - 1))] ?? rows[0];
   const workflowFamilies = useMemo(
     () => Array.from(new Set(workflowSpecs.map((workflow) => workflow.family))).sort(),
     [workflowSpecs]
@@ -870,18 +886,42 @@ export const ScenarioTab = () => {
         </div>
 
         <div className="mt-4 rounded-xl border border-stroke bg-ink/50 p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display text-sm text-ice">{t.previewTitle}</h3>
+              <p className="mt-1 text-xs text-slate">{t.previewHelp}</p>
+            </div>
+            <p className="rounded-md border border-stroke bg-card px-3 py-2 text-xs text-slate">
+              {t.currentSetup}: {selectedWorkflowId ? selectedWorkflow?.name : `${taskCount} ${t.tasks}`} · {populationSize} {t.population} · {generations} {t.generations}
+            </p>
+          </div>
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-ice">
             {rows.map((row, idx) => (
               <div key={row.name} className="flex items-center gap-3">
-                <div className="rounded-lg border border-stroke bg-card px-4 py-3 text-center">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTierIndex(idx)}
+                  className={`rounded-lg border px-4 py-3 text-center transition ${selectedTierIndex === idx ? "border-accent bg-accent/15" : "border-stroke bg-card hover:border-accent/60"}`}
+                >
                   <div className="font-display">{row.name}</div>
                   <div className="mt-1 text-xs text-accent">x{row.values.devices}</div>
-                </div>
+                  <div className="mt-2 text-[10px] text-slate">
+                    {t.speed}: {row.values.processing_rate}
+                  </div>
+                </button>
                 {idx < rows.length - 1 && <span className="text-slate">-&gt;</span>}
               </div>
             ))}
           </div>
           <p className="mt-3 text-center text-xs text-slate">{t.transfers}</p>
+          {selectedTier && (
+            <div className="mt-3 grid gap-2 rounded-lg border border-stroke bg-card/70 p-3 text-xs text-slate md:grid-cols-4">
+              <p><span className="text-ice">{t.activeTier}</span>: {selectedTier.name}</p>
+              <p>{t.speed}: <span className="text-accent">{selectedTier.values.processing_rate}</span></p>
+              <p>{t.cost}: <span className="text-accent">{selectedTier.values.processing_cost}</span></p>
+              <p>{t.energy}: <span className="text-accent">{selectedTier.values.working_power} W</span></p>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 overflow-x-auto">
