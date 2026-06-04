@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { buildApiUrl } from "../lib/api";
 import { useAppStore } from "../store/useAppStore";
+import { DrawableLandscape } from "./explore/DrawableLandscape";
+import { Landscape3DExplorer } from "./explore/Landscape3DExplorer";
 
 type DomainKind = "mono_objective" | "tsp" | "bin_packing" | "bayesian" | "noisy" | "drawable";
 
@@ -182,6 +184,8 @@ export const V2ExploreTab = () => {
 
   return (
     <section className="space-y-4">
+      <DrawableLandscape />
+      <Landscape3DExplorer />
       <div className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
         <h2 className="font-display text-lg text-ice">{text.title}</h2>
         <p className="mt-1 text-xs leading-5 text-slate">{text.intro}</p>

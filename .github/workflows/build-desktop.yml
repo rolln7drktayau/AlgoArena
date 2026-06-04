@@ -1,0 +1,39 @@
+name: Build Desktop Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install root dependencies
+        run: npm install
+      - name: Install frontend dependencies
+        run: npm --prefix frontend install
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Build desktop
+        run: npm run dist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: algoarena-desktop-${{ matrix.os }}
+          path: dist-electron/**

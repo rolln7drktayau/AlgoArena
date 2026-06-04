@@ -11,6 +11,7 @@ import { ProfileSetup } from "./components/ProfileSetup";
 import { RadarSummary } from "./components/RadarSummary";
 import { ReplayControls } from "./components/ReplayControls";
 import { ScenarioTab } from "./components/ScenarioTab";
+import { SurpriseMeButton } from "./components/SurpriseMeButton";
 import { TutorialTab } from "./components/TutorialTab";
 import { V2ExploreTab } from "./components/V2ExploreTab";
 import { useRunSocket } from "./hooks/useRunSocket";
@@ -58,15 +59,15 @@ const uiText: Record<
     subtitle: "Benchmarking temps reel pour algorithmes d'optimisation multi-objectifs",
     themeLight: "Theme clair",
     themeDark: "Theme sombre",
-    tabBenchmark: "Benchmark",
-    tabScenario: "Scenario Simulator",
-    tabExplore: "Exploration V2",
+    tabBenchmark: "Comparer",
+    tabScenario: "Simuler",
+    tabExplore: "Explorer",
     tabTutorial: "Tutoriel",
     errorNoAlgo: "Active au moins un algorithme avant de lancer.",
-    scenarioTitle: "Scenario Simulator",
+    scenarioTitle: "Simuler",
     tutorialTitle: "Tutoriel",
-    problemDefTitle: "Definition du probleme",
-    algoLibTitle: "Bibliotheque d'algorithmes",
+    problemDefTitle: "Probleme",
+    algoLibTitle: "Algorithmes",
     restartRun: "Relancer la competition",
     startRun: "Lancer la competition",
     stop: "Stop",
@@ -78,8 +79,8 @@ const uiText: Record<
     errorPrefix: "Erreur",
     leaderboardTitle: "Classement",
     radarTitle: "Comparaison Radar",
-    competitionGridTitle: "Grille de competition",
-    researchChartsTitle: "Graphiques de recherche",
+    competitionGridTitle: "Panneaux concurrents",
+    researchChartsTitle: "Comparaison globale",
     languageFr: "Francais",
     languageEn: "English"
   },
@@ -87,15 +88,15 @@ const uiText: Record<
     subtitle: "Real-time benchmarking for multi-objective optimization algorithms",
     themeLight: "Light Theme",
     themeDark: "Dark Theme",
-    tabBenchmark: "Benchmark",
-    tabScenario: "Scenario Simulator",
-    tabExplore: "V2 Explore",
+    tabBenchmark: "Compare",
+    tabScenario: "Simulate",
+    tabExplore: "Explore",
     tabTutorial: "Tutorial",
     errorNoAlgo: "Enable at least one algorithm before starting.",
-    scenarioTitle: "Scenario Simulator",
+    scenarioTitle: "Simulate",
     tutorialTitle: "Tutorial",
-    problemDefTitle: "Problem Definition",
-    algoLibTitle: "Algorithm Library",
+    problemDefTitle: "Problem",
+    algoLibTitle: "Algorithms",
     restartRun: "Restart Competition",
     startRun: "Start Competition",
     stop: "Stop",
@@ -107,8 +108,8 @@ const uiText: Record<
     errorPrefix: "Error",
     leaderboardTitle: "Leaderboard",
     radarTitle: "Radar Comparison",
-    competitionGridTitle: "Competition Grid",
-    researchChartsTitle: "Common Research Charts",
+    competitionGridTitle: "Competitor Panels",
+    researchChartsTitle: "Global Comparison",
     languageFr: "Francais",
     languageEn: "English"
   }
@@ -348,6 +349,7 @@ export default function App() {
               <option value="fr">{t.languageFr}</option>
               <option value="en">{t.languageEn}</option>
             </select>
+            <SurpriseMeButton />
             <button
               type="button"
               onClick={toggleTheme}
