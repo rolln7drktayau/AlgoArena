@@ -4,6 +4,7 @@
 
 - Version courante : V2 develop
 - Branche active : `develop/v2`
+- Dernier redeploiement Pages demande depuis `develop/v2` apres activation GitHub Actions.
 - Date : 2026-06-04
 
 ## Modules complétés
