@@ -7,6 +7,20 @@ const http = require("http");
 
 let backendProcess = null;
 let backendLogPath = null;
+const DEFAULT_DESKTOP_BACKEND_PORT = 8765;
+
+function resolveBackendPort() {
+  const rawPort = process.env.ALGOARENA_DESKTOP_PORT;
+  const parsed = rawPort ? Number.parseInt(rawPort, 10) : DEFAULT_DESKTOP_BACKEND_PORT;
+  if (Number.isInteger(parsed) && parsed > 0 && parsed < 65536) {
+    return parsed;
+  }
+  return DEFAULT_DESKTOP_BACKEND_PORT;
+}
+
+function buildBackendUrl(port = resolveBackendPort()) {
+  return `http://127.0.0.1:${port}`;
+}
 
 function sanitizeFileName(fileName) {
   const fallback = "algoarena-export.bin";
@@ -32,7 +46,7 @@ function buildUniqueDownloadPath(downloadsDir, fileName) {
 function isBackendExportUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
-    if (parsed.hostname !== "127.0.0.1" || parsed.port !== "8000") {
+    if (parsed.hostname !== "127.0.0.1" || parsed.port !== String(resolveBackendPort())) {
       return false;
     }
     return /^\/api\/runs\/[^/]+\/export\/(csv|pdf|latex)$/.test(parsed.pathname) || parsed.pathname === "/api/exports/bibtex";
@@ -191,9 +205,9 @@ async function ensureDesktopRuntime(appRoot) {
   return { runtimeRoot, runtimePython };
 }
 
-function checkBackendHealth(timeoutMs = 1200) {
+function checkBackendHealth(port, timeoutMs = 1200) {
   return new Promise((resolve) => {
-    const request = http.get("http://127.0.0.1:8000/api/health", (response) => {
+    const request = http.get(`${buildBackendUrl(port)}/api/health`, (response) => {
       response.resume();
       resolve(response.statusCode === 200);
     });
@@ -207,10 +221,10 @@ function checkBackendHealth(timeoutMs = 1200) {
   });
 }
 
-async function waitForBackendReady(timeoutMs = 30000) {
+async function waitForBackendReady(port, timeoutMs = 30000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const healthy = await checkBackendHealth();
+    const healthy = await checkBackendHealth(port);
     if (healthy) {
       return true;
     }
@@ -232,14 +246,14 @@ function tailFile(filePath, maxLines = 40) {
   }
 }
 
-function startBackend(appRoot, runtime) {
+function startBackend(appRoot, runtime, port) {
   backendLogPath = path.join(runtime.runtimeRoot, "backend.log");
   fs.writeFileSync(backendLogPath, "", "utf8");
   const logStream = fs.createWriteStream(backendLogPath, { flags: "a" });
 
   backendProcess = spawn(
     runtime.runtimePython,
-    ["-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", "8000", "--ws", "wsproto"],
+    ["-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", String(port), "--ws", "wsproto"],
     {
       cwd: appRoot,
       windowsHide: true,
@@ -247,7 +261,8 @@ function startBackend(appRoot, runtime) {
       env: {
         ...process.env,
         PYTHONPATH: appRoot,
-        ALGOARENA_RUNTIME_ROOT: runtime.runtimeRoot
+        ALGOARENA_RUNTIME_ROOT: runtime.runtimeRoot,
+        ALGOARENA_DESKTOP_PORT: String(port)
       }
     }
   );
@@ -295,7 +310,7 @@ async function stopBackend() {
   }
 }
 
-function createWindow(appRoot, startupInfo = null) {
+function createWindow(appRoot, port, startupInfo = null) {
   const desktopTaskbarIcon = path.join(appRoot, "desktop", "assets", "icon-taskbar.ico");
   const desktopLegacyIcon = path.join(appRoot, "desktop", "assets", "icon.ico");
   const distLogo = path.join(appRoot, "frontend", "dist", "logo.png");
@@ -357,7 +372,7 @@ function createWindow(appRoot, startupInfo = null) {
       win.webContents.downloadURL(url);
       return;
     }
-    if (url.startsWith("http://127.0.0.1:8000")) {
+    if (url.startsWith(buildBackendUrl(port))) {
       return;
     }
     if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -372,11 +387,15 @@ function createWindow(appRoot, startupInfo = null) {
     }
   });
 
-  win.loadURL("http://127.0.0.1:8000");
+  win.webContents.session.clearCache().catch(() => {
+    // no-op
+  });
+  win.loadURL(buildBackendUrl(port));
 }
 
 app.whenReady().then(async () => {
   const appRoot = resolveAppRoot();
+  const backendPort = resolveBackendPort();
 
   let runtime;
   try {
@@ -392,15 +411,15 @@ app.whenReady().then(async () => {
     return;
   }
 
-  startBackend(appRoot, runtime);
-  const ready = await waitForBackendReady();
+  startBackend(appRoot, runtime, backendPort);
+  const ready = await waitForBackendReady(backendPort);
 
   if (!ready) {
     const logTail = tailFile(backendLogPath, 50);
     await dialog.showMessageBox({
       type: "error",
       title: "AlgoArena Desktop",
-      message: "Backend did not become ready on http://127.0.0.1:8000.",
+      message: `Backend did not become ready on ${buildBackendUrl(backendPort)}.`,
       detail:
         "AlgoArena a tente la preparation automatiquement.\n" +
         "Si le probleme persiste, lance une fois:\n" +
@@ -413,11 +432,11 @@ app.whenReady().then(async () => {
     return;
   }
 
-  createWindow(appRoot, {
+  createWindow(appRoot, backendPort, {
     title: "AlgoArena Desktop",
     message: "AlgoArena is ready.",
-    localUrl: "http://127.0.0.1:8000",
-    docsUrl: "http://127.0.0.1:8000/docs",
+    localUrl: buildBackendUrl(backendPort),
+    docsUrl: `${buildBackendUrl(backendPort)}/docs`,
     note: "Close this message to open the desktop window."
   });
 });
