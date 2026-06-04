@@ -75,11 +75,4 @@ temp/
 
 # Test / report exports
 reports/
-!reports/
-reports/*
-!reports/RAPPORT_V2_DESIGN_SCREENSHOTS.md
-!reports/screenshots/
-reports/screenshots/*
-!reports/screenshots/v2/
-!reports/screenshots/v2/*.png
 exports/

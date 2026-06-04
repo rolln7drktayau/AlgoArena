@@ -3,109 +3,364 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AlgoArena</title>
+    <title>AlgoArena - Visual optimization lab</title>
     <style>
-      :root { color-scheme: dark; --panel:#081017; --ink:#101822; --card:#102031; --accent:#29dba6; --ember:#f18f01; --ice:#d4f2ff; --slate:#8bb0c5; --stroke:#214059; }
+      :root {
+        color-scheme: dark;
+        --bg: #071014;
+        --panel: #0a171d;
+        --ink: #101a24;
+        --card: #102532;
+        --accent: #27d6a3;
+        --warm: #f29f3d;
+        --blue: #7eb7ff;
+        --ice: #e7f8ff;
+        --muted: #91adbb;
+        --stroke: #224253;
+      }
       * { box-sizing: border-box; }
-      body { margin:0; background:linear-gradient(180deg,var(--panel),#071018); color:var(--ice); font-family: ui-monospace, Menlo, Consolas, monospace; }
-      main { width:min(1160px,calc(100% - 32px)); margin:auto; padding:26px 0 40px; }
-      header { min-height:86vh; display:grid; align-content:center; gap:26px; }
-      .nav { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-      .brand { display:flex; align-items:center; gap:12px; font:700 26px system-ui; }
-      .logo { width:42px; height:42px; border:1px solid var(--stroke); border-radius:10px; display:grid; place-items:center; color:var(--accent); }
-      h1 { font:800 clamp(42px,8vw,90px)/0.95 system-ui; margin:0; max-width:920px; }
-      h2 { font:700 24px system-ui; margin:0 0 8px; }
-      p { color:var(--slate); line-height:1.6; }
-      .hero-actions, .row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-      button, select, input, textarea, a.button { border:1px solid var(--stroke); border-radius:10px; background:var(--ink); color:var(--ice); padding:11px 14px; font:inherit; text-decoration:none; }
-      button.primary, a.primary { background:var(--accent); color:#04120d; font-weight:800; border-color:transparent; }
-      button.warm { background:var(--ember); color:#130b00; font-weight:800; border-color:transparent; }
-      section { border:1px solid var(--stroke); border-radius:16px; background:color-mix(in srgb,var(--card),transparent 10%); padding:18px; margin:16px 0; }
-      .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
-      .two { display:grid; grid-template-columns:1.2fr .8fr; gap:16px; align-items:start; }
-      canvas { width:100%; border:1px solid var(--stroke); border-radius:14px; background:var(--ink); }
-      .metric { font:800 36px system-ui; color:var(--accent); }
-      .badge { display:inline-flex; border:1px solid var(--stroke); border-radius:999px; padding:6px 10px; color:var(--slate); font-size:12px; }
-      .card { border:1px solid var(--stroke); border-radius:12px; padding:14px; background:var(--ink); }
-      footer { color:var(--slate); padding:24px 0; }
-      @media(max-width:840px){ .grid,.two{grid-template-columns:1fr;} header{min-height:auto;} }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ice);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      a { color: inherit; }
+      .wrap { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+      .nav {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 5;
+        border-bottom: 1px solid rgba(34, 66, 83, 0.74);
+        background: rgba(7, 16, 20, 0.82);
+        backdrop-filter: blur(16px);
+      }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; min-height: 68px; gap: 18px; }
+      .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: 0; }
+      .brand img { width: 38px; height: 38px; border-radius: 8px; }
+      .links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border: 1px solid var(--stroke);
+        border-radius: 8px;
+        padding: 0 14px;
+        background: rgba(16, 26, 36, 0.84);
+        color: var(--ice);
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .button.primary { background: var(--accent); color: #04130e; border-color: transparent; }
+      .button.warm { background: var(--warm); color: #160c02; border-color: transparent; }
+      .hero {
+        position: relative;
+        min-height: 92vh;
+        display: grid;
+        align-items: center;
+        overflow: hidden;
+        border-bottom: 1px solid var(--stroke);
+        background: #071014;
+      }
+      #heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.92; }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(7,16,20,0.96), rgba(7,16,20,0.72) 46%, rgba(7,16,20,0.22));
+      }
+      .hero-content { position: relative; z-index: 1; padding: 120px 0 64px; max-width: 760px; }
+      .eyebrow { color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 0.12em; }
+      h1 { margin: 14px 0 0; font-size: clamp(44px, 7vw, 92px); line-height: 0.93; letter-spacing: 0; }
+      h2 { margin: 0; font-size: clamp(28px, 4vw, 48px); line-height: 1; letter-spacing: 0; }
+      h3 { margin: 0 0 8px; font-size: 18px; }
+      p { color: var(--muted); line-height: 1.62; }
+      .lead { max-width: 660px; font-size: 19px; color: #bdd6e1; }
+      .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+      .proof {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1px;
+        border: 1px solid var(--stroke);
+        background: var(--stroke);
+        margin-top: 34px;
+      }
+      .proof div { background: rgba(10, 23, 29, 0.9); padding: 16px; }
+      .proof strong { display: block; color: var(--ice); font-size: 24px; }
+      .section { padding: 74px 0; border-bottom: 1px solid rgba(34, 66, 83, 0.72); }
+      .section-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+      .section-head p { max-width: 560px; margin: 0; }
+      .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+      .grid2 { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; align-items: start; }
+      .card {
+        border: 1px solid var(--stroke);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+      .card.accent { border-color: rgba(39, 214, 163, 0.65); }
+      .demo-panel { background: #09151b; border: 1px solid var(--stroke); border-radius: 8px; padding: 16px; }
+      canvas.demo { width: 100%; min-height: 390px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--ink); display: block; }
+      .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+      label { color: var(--muted); font-size: 13px; display: grid; gap: 6px; }
+      select, input {
+        min-height: 40px;
+        border: 1px solid var(--stroke);
+        border-radius: 8px;
+        background: var(--ink);
+        color: var(--ice);
+        padding: 0 10px;
+        font: inherit;
+      }
+      .metric { font-size: 44px; line-height: 1; color: var(--accent); font-weight: 900; }
+      .pill { display: inline-flex; align-items: center; min-height: 30px; border: 1px solid var(--stroke); border-radius: 999px; padding: 0 10px; color: var(--muted); font-size: 12px; }
+      .route { display: grid; gap: 10px; }
+      .route-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: center; color: var(--muted); }
+      .route-row strong { color: var(--ice); }
+      footer { padding: 32px 0; color: var(--muted); }
+      @media (max-width: 880px) {
+        .links a:not(.primary) { display: none; }
+        .hero { min-height: auto; }
+        .hero-content { padding-top: 112px; }
+        .hero::after { background: rgba(7,16,20,0.78); }
+        .proof, .grid3, .grid2 { grid-template-columns: 1fr; }
+        .section-head { display: block; }
+      }
     </style>
   </head>
   <body>
+    <nav class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="#top" aria-label="AlgoArena accueil">
+          <img src="logo.png" alt="" />
+          <span>AlgoArena</span>
+        </a>
+        <div class="links">
+          <a class="button" href="#demo">Demo</a>
+          <a class="button" href="#versions">Versions</a>
+          <a class="button primary" href="https://github.com/rolln7drktayau/AlgoArena">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <header id="top" class="hero">
+      <canvas id="heroCanvas"></canvas>
+      <div class="wrap hero-content">
+        <div class="eyebrow">Web, desktop et CLI pour explorer l'optimisation</div>
+        <h1>Compare des algorithmes. Vois pourquoi ils gagnent.</h1>
+        <p class="lead">
+          AlgoArena transforme NSGA-II, NSGA-III, MOEA/D, TSP, bin packing, paysages dessinables et workflows
+          Edge/Fog/Cloud en experiences visuelles que chercheurs, etudiants et curieux peuvent comprendre.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#demo">Lancer la demo</a>
+          <a class="button" href="https://github.com/rolln7drktayau/AlgoArena/archive/refs/heads/develop/v2.zip">Telecharger V2</a>
+        </div>
+        <div class="proof" aria-label="Points forts">
+          <div><strong>0</strong><span>serveur requis pour Pages</span></div>
+          <div><strong>3</strong><span>canaux: web, desktop, CLI</span></div>
+          <div><strong>Labs</strong><span>historique local exportable</span></div>
+          <div><strong>V2</strong><span>multi-domaines visuels</span></div>
+        </div>
+      </div>
+    </header>
+
     <main>
-      <header>
-        <div class="nav">
-          <div class="brand"><span class="logo">◇</span>AlgoArena</div>
-          <span id="runtime" class="badge">Chargement...</span>
-        </div>
-        <div>
-          <h1>Compare des algorithmes d'optimisation. Regarde-les apprendre.</h1>
-          <p>Une demo publique sans installation. Lance un exemple, observe un chemin qui s'ameliore, puis teste d'autres problemes visuels.</p>
-          <div class="hero-actions">
-            <a class="button primary" href="#demo">Essayer maintenant</a>
-            <a class="button" href="https://github.com/rolln7drktayau/AlgoArena/releases">Telecharger la version complete</a>
+      <section id="demo" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="pill">Demo instantanee</span>
+              <h2>Un probleme visible, un algorithme qui s'ameliore.</h2>
+            </div>
+            <p>Cette page Pages reste volontairement autonome. Elle donne un apercu visuel; la version complete ajoute FastAPI, WebSockets, pymoo, Labs persistants et exports academiques.</p>
           </div>
-        </div>
-      </header>
 
-      <section id="demo">
-        <div class="row" style="justify-content:space-between">
-          <div>
-            <h2>Demo instantanee</h2>
-            <p>Trouver le chemin le plus court entre des villes. Tu n'as rien a configurer.</p>
-          </div>
-          <button id="surprise" class="warm">* Surprends-moi</button>
-        </div>
-        <div class="row">
-          <label>Probleme
-            <select id="problem"><option value="tsp">TSP</option><option value="bin">Bin Packing</option><option value="minimum">Trouver le minimum</option></select>
-          </label>
-          <label>Algorithme
-            <select id="algo"><option value="evolution">Evolution</option><option value="random">Exploration aleatoire</option><option value="patient">Explorateur patient</option></select>
-          </label>
-          <button id="run" class="primary">Lancer</button>
-        </div>
-        <div class="two" style="margin-top:16px">
-          <canvas id="canvas" width="720" height="430"></canvas>
-          <div class="card">
-            <p>Score actuel</p>
-            <div id="score" class="metric">-</div>
-            <p id="explain">Clique sur Surprends-moi pour voir AlgoArena prendre vie.</p>
-            <label>Nom du Lab <input id="labTitle" value="Demo AlgoArena" /></label>
-            <button id="saveLab">Sauvegarder le Lab</button>
-            <button id="exportLab">Exporter .algoarena</button>
+          <div class="grid2">
+            <div class="demo-panel">
+              <div class="controls">
+                <label>Probleme
+                  <select id="problem">
+                    <option value="tsp">TSP visuel</option>
+                    <option value="minimum">Paysage mono-objectif</option>
+                    <option value="bin">Bin packing</option>
+                  </select>
+                </label>
+                <label>Algorithme
+                  <select id="algo">
+                    <option value="evolution">Evolution</option>
+                    <option value="random">Exploration aleatoire</option>
+                    <option value="patient">Explorateur patient</option>
+                  </select>
+                </label>
+                <button id="run" class="button primary">Lancer</button>
+                <button id="surprise" class="button warm">Surprise</button>
+              </div>
+              <canvas id="demoCanvas" class="demo" width="760" height="430"></canvas>
+            </div>
+            <aside class="card accent">
+              <p>Score actuel</p>
+              <div id="score" class="metric">-</div>
+              <p id="explain">Lance la demo pour voir une solution se transformer generation apres generation.</p>
+              <div class="route">
+                <label>Nom du Lab
+                  <input id="labTitle" value="Demo AlgoArena" />
+                </label>
+                <button id="saveLab" class="button">Sauvegarder dans ce navigateur</button>
+                <button id="exportLab" class="button">Exporter .algoarena</button>
+              </div>
+            </aside>
           </div>
         </div>
       </section>
 
-      <section>
-        <h2>Pourquoi AlgoArena ?</h2>
-        <div class="grid">
-          <div class="card"><h3>Voir les algorithmes penser</h3><p>Les solutions bougent, s'ameliorent et parfois se trompent. Tu vois le processus.</p></div>
-          <div class="card"><h3>Comparer equitablement</h3><p>Plusieurs methodes sur le meme probleme, avec les memes conditions.</p></div>
-          <div class="card"><h3>Comprendre pourquoi</h3><p>Pas seulement un gagnant : l'app montre convergence, exploration et blocages.</p></div>
+      <section class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="pill">Ce que la V2 met en avant</span>
+              <h2>Pas seulement un score final.</h2>
+            </div>
+            <p>L'objectif est de montrer le processus: exploration, convergence, stagnation, decisions et compromis.</p>
+          </div>
+          <div class="grid3">
+            <article class="card"><h3>Comparaison equitable</h3><p>Plusieurs algorithmes ou configurations partagent le meme probleme, les memes budgets et les memes visualisations.</p></article>
+            <article class="card"><h3>Labs persistants</h3><p>Un Lab garde le probleme, les runs, les annotations, les graphiques epingles et le journal local.</p></article>
+            <article class="card"><h3>Publics differents</h3><p>Etudiant, chercheur ou curieux: le niveau de jargon, les exports et les explications s'adaptent.</p></article>
+          </div>
         </div>
       </section>
-      <footer>
-        <a href="https://github.com/rolln7drktayau/AlgoArena">GitHub</a> · Documentation · Fait avec coeur pour la recherche et l'enseignement
-      </footer>
+
+      <section id="versions" class="section">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="pill">Lancer AlgoArena</span>
+              <h2>Choisis le canal adapte.</h2>
+            </div>
+            <p>Pages sert de vitrine-demonstrateur public. Le travail complet se fait en local avec le desktop ou le repo.</p>
+          </div>
+          <div class="route">
+            <div class="route-row"><strong>Web public</strong><span>Ouvre GitHub Pages, aucune installation, demo autonome.</span></div>
+            <div class="route-row"><strong>Desktop</strong><span>Installe l'application Windows generee par <code>npm run dist:win</code>.</span></div>
+            <div class="route-row"><strong>Local dev</strong><span>Lance front, backend et Electron depuis la branche <code>develop/v2</code>.</span></div>
+            <div class="route-row"><strong>CLI</strong><span>Utilise les commandes Python pour lister les algorithmes et lancer des domaines rapides.</span></div>
+          </div>
+        </div>
+      </section>
     </main>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://github.com/rolln7drktayau/AlgoArena">GitHub</a>
+        <span> · AlgoArena V2 · Recherche, enseignement et exploration visuelle</span>
+      </div>
+    </footer>
+
     <script>
-      const c=document.getElementById("canvas"),ctx=c.getContext("2d"),scoreEl=document.getElementById("score"),explain=document.getElementById("explain");
-      let runtime="Mode rapide", lab=JSON.parse(localStorage.getItem("algoarena-pages-lab")||'{"runs":[]}');
-      const points=[ [80,80],[180,310],[300,140],[430,340],[580,110],[650,275],[130,210],[245,70],[480,210],[675,65],[370,260],[60,360] ];
-      const orders=[[0,3,9,1,5,7,11,4,6,10,2,8],[0,7,9,1,5,3,11,4,6,10,2,8],[0,7,2,1,5,3,11,4,6,10,9,8],[0,7,2,10,5,3,11,1,6,4,9,8],[0,7,2,10,3,5,11,1,6,8,4,9],[0,7,2,10,3,11,1,6,8,5,4,9]];
-      function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1])}
-      function routeScore(o){return o.reduce((s,i,k)=>s+dist(points[i],points[o[(k+1)%o.length]]),0)}
-      function draw(order){ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#101822";ctx.fillRect(0,0,c.width,c.height);ctx.strokeStyle="#29dba6";ctx.lineWidth=4;ctx.beginPath();order.concat(order[0]).forEach((idx,k)=>{const p=points[idx]; if(k===0)ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]);});ctx.stroke();points.forEach((p,i)=>{ctx.fillStyle="#f18f01";ctx.beginPath();ctx.arc(p[0],p[1],7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d4f2ff";ctx.fillText(String(i+1),p[0]+9,p[1]-9);});}
-      function run(){let i=0; const timer=setInterval(()=>{const order=orders[i%orders.length]; draw(order); const s=routeScore(order); scoreEl.textContent=Math.round(s); explain.textContent=`Generation ${i+1}/${orders.length} : le chemin devient plus court.`; i++; if(i>=orders.length){clearInterval(timer); lab.runs.unshift({date:new Date().toISOString(),problem:"TSP",score:s}); localStorage.setItem("algoarena-pages-lab",JSON.stringify(lab));}},650)}
-      document.getElementById("surprise").onclick=run; document.getElementById("run").onclick=run;
-      document.getElementById("saveLab").onclick=()=>{lab.title=document.getElementById("labTitle").value; localStorage.setItem("algoarena-pages-lab",JSON.stringify(lab)); explain.textContent="Lab sauvegarde dans ce navigateur.";};
-      document.getElementById("exportLab").onclick=()=>{const blob=new Blob([JSON.stringify(lab,null,2)],{type:"application/json"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="algoarena-demo.algoarena";a.click();URL.revokeObjectURL(u);};
-      const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),8000));
-      Promise.race([loadPyodide(),timeout]).then(()=>{runtime="Python actif";document.getElementById("runtime").textContent="Python actif";}).catch(()=>{document.getElementById("runtime").textContent=runtime;});
-      draw(orders[0]);
+      const heroCanvas = document.getElementById("heroCanvas");
+      const heroCtx = heroCanvas.getContext("2d");
+      const demoCanvas = document.getElementById("demoCanvas");
+      const ctx = demoCanvas.getContext("2d");
+      const scoreEl = document.getElementById("score");
+      const explain = document.getElementById("explain");
+      let lab = JSON.parse(localStorage.getItem("algoarena-pages-lab") || '{"runs":[]}');
+      const points = [[80,80],[180,310],[300,140],[430,340],[580,110],[650,275],[130,210],[245,70],[480,210],[675,65],[370,260],[60,360]];
+      const orders = [
+        [0,3,9,1,5,7,11,4,6,10,2,8],
+        [0,7,9,1,5,3,11,4,6,10,2,8],
+        [0,7,2,1,5,3,11,4,6,10,9,8],
+        [0,7,2,10,5,3,11,1,6,4,9,8],
+        [0,7,2,10,3,5,11,1,6,8,4,9],
+        [0,7,2,10,3,11,1,6,8,5,4,9]
+      ];
+      function resizeHero() {
+        heroCanvas.width = heroCanvas.clientWidth * devicePixelRatio;
+        heroCanvas.height = heroCanvas.clientHeight * devicePixelRatio;
+      }
+      function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+      function routeScore(order) { return order.reduce((s, i, k) => s + dist(points[i], points[order[(k + 1) % order.length]]), 0); }
+      function drawRoute(order, surface, context, scale = 1) {
+        context.clearRect(0, 0, surface.width, surface.height);
+        context.fillStyle = "#101a24";
+        context.fillRect(0, 0, surface.width, surface.height);
+        context.strokeStyle = "#27d6a3";
+        context.lineWidth = 4 * scale;
+        context.beginPath();
+        order.concat(order[0]).forEach((idx, k) => {
+          const p = points[idx];
+          const x = p[0] * scale;
+          const y = p[1] * scale;
+          if (k === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        });
+        context.stroke();
+        points.forEach((p, i) => {
+          context.fillStyle = "#f29f3d";
+          context.beginPath();
+          context.arc(p[0] * scale, p[1] * scale, 7 * scale, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "#e7f8ff";
+          context.font = `${12 * scale}px system-ui`;
+          context.fillText(String(i + 1), p[0] * scale + 10 * scale, p[1] * scale - 8 * scale);
+        });
+      }
+      function drawDemo(order) { drawRoute(order, demoCanvas, ctx, 1); }
+      function animateHero(t) {
+        const w = heroCanvas.width;
+        const h = heroCanvas.height;
+        heroCtx.clearRect(0, 0, w, h);
+        heroCtx.fillStyle = "#071014";
+        heroCtx.fillRect(0, 0, w, h);
+        const scale = Math.max(w / 900, h / 560);
+        heroCtx.save();
+        heroCtx.translate(w * 0.52, h * 0.14);
+        heroCtx.scale(scale, scale);
+        heroCtx.globalAlpha = 0.8;
+        const order = orders[Math.floor(t / 850) % orders.length];
+        drawRoute(order, { width: 760, height: 430 }, heroCtx, 1);
+        heroCtx.restore();
+        requestAnimationFrame(animateHero);
+      }
+      function run() {
+        let i = 0;
+        const timer = setInterval(() => {
+          const order = orders[i % orders.length];
+          drawDemo(order);
+          const s = routeScore(order);
+          scoreEl.textContent = Math.round(s);
+          explain.textContent = `Generation ${i + 1}/${orders.length}: le chemin devient plus court et plus stable.`;
+          i += 1;
+          if (i >= orders.length) {
+            clearInterval(timer);
+            lab.runs.unshift({ date: new Date().toISOString(), problem: "TSP", score: s });
+            localStorage.setItem("algoarena-pages-lab", JSON.stringify(lab));
+          }
+        }, 620);
+      }
+      document.getElementById("run").onclick = run;
+      document.getElementById("surprise").onclick = run;
+      document.getElementById("saveLab").onclick = () => {
+        lab.title = document.getElementById("labTitle").value;
+        localStorage.setItem("algoarena-pages-lab", JSON.stringify(lab));
+        explain.textContent = "Lab sauvegarde dans ce navigateur.";
+      };
+      document.getElementById("exportLab").onclick = () => {
+        const blob = new Blob([JSON.stringify(lab, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "algoarena-demo.algoarena";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      window.addEventListener("resize", resizeHero);
+      resizeHero();
+      drawDemo(orders[0]);
+      requestAnimationFrame(animateHero);
     </script>
   </body>
 </html>
