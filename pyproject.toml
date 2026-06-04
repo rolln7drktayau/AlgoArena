@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "algoarena"
+version = "2.0.0.dev0"
+description = "Interactive optimization algorithm benchmarking, visualization, and scenario simulation platform."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "AST & RCT" }
+]
+dependencies = [
+  "fastapi==0.116.1",
+  "uvicorn[standard]==0.35.0",
+  "numpy==2.2.2",
+  "pandas==2.2.3",
+  "pymoo>=0.6.1.5,<0.7",
+  "deap==1.4.3",
+  "python-multipart==0.0.20",
+  "reportlab==4.2.5",
+  "RestrictedPython==8.0"
+]
+
+[project.scripts]
+algoarena = "algoarena_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["algoarena_cli*", "backend*", "algorithms*", "problems*"]

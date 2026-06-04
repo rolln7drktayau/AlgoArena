@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AlgoArena Web Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --panel: #0a1117;
+        --ink: #101822;
+        --card: #101f2b;
+        --accent: #29dba6;
+        --ember: #f18f01;
+        --ice: #d4f2ff;
+        --slate: #7da2b8;
+        --stroke: #214059;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, var(--panel), var(--ink));
+        color: var(--ice);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0; }
+      header, section { border: 1px solid var(--stroke); background: color-mix(in srgb, var(--card), transparent 12%); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+      h1, h2 { margin: 0; font-family: system-ui, sans-serif; letter-spacing: 0; }
+      p { color: var(--slate); line-height: 1.5; }
+      label { display: grid; gap: 6px; color: var(--slate); font-size: 12px; }
+      input, select, textarea, button {
+        border: 1px solid var(--stroke);
+        border-radius: 8px;
+        background: var(--ink);
+        color: var(--ice);
+        padding: 10px;
+        font: inherit;
+      }
+      button { cursor: pointer; }
+      button.primary { background: var(--accent); color: #06110e; font-weight: 700; }
+      .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .status { color: var(--accent); font-size: 12px; }
+      canvas, pre { width: 100%; border: 1px solid var(--stroke); border-radius: 10px; background: var(--ink); }
+      pre { min-height: 220px; max-height: 360px; overflow: auto; padding: 12px; color: var(--slate); }
+      @media (max-width: 860px) { .grid, .two { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>AlgoArena Web Demo</h1>
+        <p>
+          Version GitHub Pages sans serveur. Les calculs tournent dans ton navigateur via Pyodide quand disponible,
+          avec fallback JavaScript. Les fonctions dangereuses, uploads Python et subprocess sont desactives.
+        </p>
+        <p id="runtime" class="status">Runtime: initialisation...</p>
+      </header>
+
+      <section>
+        <h2>Lab local</h2>
+        <p>Ce Lab leger est sauvegarde dans localStorage et exportable en JSON.</p>
+        <div class="grid">
+          <label>Nom du Lab <input id="labTitle" value="AlgoArena Web Lab" /></label>
+          <label>Profil
+            <select id="profile">
+              <option value="student">Etudiant</option>
+              <option value="researcher">Chercheur</option>
+              <option value="curious">Curieux</option>
+            </select>
+          </label>
+          <button id="saveLab">Sauvegarder</button>
+          <button id="exportLab">Exporter .algoarena</button>
+        </div>
+        <textarea id="journal" rows="4" placeholder="Journal libre du Lab..."></textarea>
+      </section>
+
+      <section>
+        <h2>Optimisation locale</h2>
+        <div class="grid">
+          <label>Domaine
+            <select id="domain">
+              <option value="mono">Mono-objectif</option>
+              <option value="noisy">Fonction bruitee</option>
+              <option value="tsp">TSP</option>
+            </select>
+          </label>
+          <label>Iterations <input id="iterations" type="number" min="1" max="5000" value="180" /></label>
+          <label>Seed <input id="seed" type="number" value="42" /></label>
+          <button id="run" class="primary">Lancer</button>
+        </div>
+        <label>Expression Python sure (mono/noisy)
+          <input id="expression" value="(x[0]-0.35)**2 + (x[1]-0.65)**2" />
+        </label>
+        <p id="feedback" class="status"></p>
+      </section>
+
+      <div class="two">
+        <section>
+          <h2>Convergence</h2>
+          <canvas id="chart" width="560" height="300"></canvas>
+        </section>
+        <section>
+          <h2>Resultat</h2>
+          <pre id="output">{}</pre>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+    <script>
+      const state = {
+        pyodide: null,
+        runtime: "javascript-fallback",
+        lab: JSON.parse(localStorage.getItem("algoarena-web-lab") || "null") || {
+          schema_version: 1,
+          id: "web-lab",
+          title: "AlgoArena Web Lab",
+          profile: "student",
+          journal: "",
+          runs: []
+        }
+      };
+
+      const $ = (id) => document.getElementById(id);
+      $("labTitle").value = state.lab.title;
+      $("profile").value = state.lab.profile;
+      $("journal").value = state.lab.journal || "";
+
+      async function bootPyodide() {
+        try {
+          state.pyodide = await loadPyodide();
+          state.runtime = "pyodide";
+          $("runtime").textContent = "Runtime: Pyodide actif, calcul local navigateur.";
+        } catch (error) {
+          $("runtime").textContent = "Runtime: fallback JavaScript, Pyodide indisponible.";
+        }
+      }
+
+      function rng(seed) {
+        let s = Number(seed) || 42;
+        return () => {
+          s = (s * 1664525 + 1013904223) >>> 0;
+          return s / 4294967296;
+        };
+      }
+
+      function runJs(payload) {
+        const random = rng(payload.seed);
+        const history = [];
+        let best = { x: [], value: Infinity };
+        if (payload.domain === "tsp") {
+          const points = Array.from({ length: 14 }, () => ({ x: random(), y: random() }));
+          const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+          const score = (order) => order.reduce((sum, idx, i) => sum + dist(points[idx], points[order[(i + 1) % order.length]]), 0);
+          let order = points.map((_, i) => i).sort(() => random() - 0.5);
+          let bestOrder = [...order];
+          let bestValue = score(order);
+          for (let iteration = 1; iteration <= payload.iterations; iteration++) {
+            const candidate = [...order];
+            const a = Math.floor(random() * candidate.length);
+            const b = Math.floor(random() * candidate.length);
+            [candidate[a], candidate[b]] = [candidate[b], candidate[a]];
+            if (score(candidate) < score(order) || random() < 0.02) order = candidate;
+            const value = score(order);
+            if (value < bestValue) { bestValue = value; bestOrder = [...order]; }
+            history.push({ iteration, value, best: bestValue });
+          }
+          return { runtime: state.runtime, kind: "tsp", points, best: { order: bestOrder, value: bestValue }, history };
+        }
+        for (let iteration = 1; iteration <= payload.iterations; iteration++) {
+          const x = [random(), random()];
+          let value = (x[0] - 0.35) ** 2 + (x[1] - 0.65) ** 2;
+          if (payload.domain === "noisy") value += (random() - 0.5) * 0.12;
+          if (value < best.value) best = { x, value };
+          history.push({ iteration, value, best: best.value });
+        }
+        return { runtime: state.runtime, kind: payload.domain, best, history };
+      }
+
+      async function runPy(payload) {
+        if (!state.pyodide || payload.domain === "tsp") return runJs(payload);
+        state.pyodide.globals.set("payload", payload);
+        const code = `
+import random, math
+import ast
+rng = random.Random(int(payload["seed"]))
+expr = payload["expression"]
+allowed_names = {"x", "math"}
+allowed_nodes = (
+    ast.Expression, ast.BinOp, ast.UnaryOp, ast.Call, ast.Name, ast.Load,
+    ast.Constant, ast.Subscript, ast.Attribute, ast.Add, ast.Sub, ast.Mult,
+    ast.Div, ast.Pow, ast.Mod, ast.USub, ast.UAdd
+)
+tree = ast.parse(expr, mode="eval")
+for node in ast.walk(tree):
+    if not isinstance(node, allowed_nodes):
+        raise ValueError(f"Unsupported syntax: {type(node).__name__}")
+    if isinstance(node, ast.Name) and node.id not in allowed_names:
+        raise ValueError(f"Unknown name: {node.id}")
+    if isinstance(node, ast.Attribute) and (not isinstance(node.value, ast.Name) or node.value.id != "math" or node.attr.startswith("_")):
+        raise ValueError("Only safe math.* attributes are allowed")
+compiled = compile(tree, "<algoarena-web-expression>", "eval")
+best = {"x": [], "value": float("inf")}
+history = []
+for iteration in range(1, int(payload["iterations"]) + 1):
+    x = [rng.random(), rng.random()]
+    value = float(eval(compiled, {"__builtins__": {}, "math": math}, {"x": x}))
+    if payload["domain"] == "noisy":
+        value += rng.gauss(0.0, 0.06)
+    if value < best["value"]:
+        best = {"x": x, "value": value}
+    history.append({"iteration": iteration, "value": value, "best": best["value"]})
+{"runtime": "pyodide", "kind": payload["domain"], "best": best, "history": history}
+`;
+        return state.pyodide.runPython(code).toJs({ dict_converter: Object.fromEntries });
+      }
+
+      function draw(result) {
+        const canvas = $("chart");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const data = result.history || [];
+        if (!data.length) return;
+        const pad = 28;
+        const values = data.flatMap((row) => [row.value, row.best]);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const sx = (i) => pad + (i / Math.max(1, data.length - 1)) * (canvas.width - pad * 2);
+        const sy = (v) => canvas.height - pad - ((v - min) / Math.max(1e-9, max - min)) * (canvas.height - pad * 2);
+        ctx.strokeStyle = "#214059";
+        ctx.strokeRect(pad, pad, canvas.width - pad * 2, canvas.height - pad * 2);
+        [["value", "#f18f01"], ["best", "#29dba6"]].forEach(([key, color]) => {
+          ctx.beginPath();
+          ctx.strokeStyle = color;
+          data.forEach((row, i) => {
+            const x = sx(i);
+            const y = sy(row[key]);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        });
+      }
+
+      $("run").onclick = async () => {
+        const payload = {
+          domain: $("domain").value,
+          iterations: Number($("iterations").value),
+          seed: Number($("seed").value),
+          expression: $("expression").value
+        };
+        $("feedback").textContent = "Calcul en cours...";
+        const result = await runPy(payload);
+        state.lab.runs.unshift({ id: `run-${Date.now()}`, created_at: new Date().toISOString(), payload, result });
+        localStorage.setItem("algoarena-web-lab", JSON.stringify(state.lab));
+        $("output").textContent = JSON.stringify(result.best, null, 2);
+        $("feedback").textContent = `Termine via ${result.runtime}.`;
+        draw(result);
+      };
+
+      $("saveLab").onclick = () => {
+        state.lab.title = $("labTitle").value;
+        state.lab.profile = $("profile").value;
+        state.lab.journal = $("journal").value;
+        localStorage.setItem("algoarena-web-lab", JSON.stringify(state.lab));
+        $("feedback").textContent = "Lab sauvegarde localement.";
+      };
+
+      $("exportLab").onclick = () => {
+        $("saveLab").onclick();
+        const blob = new Blob([JSON.stringify(state.lab, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${state.lab.title.replace(/[^a-z0-9]+/gi, "-")}.algoarena`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      bootPyodide();
+    </script>
+  </body>
+</html>

@@ -9,11 +9,12 @@ from pydantic import BaseModel, Field, field_validator
 class AlgorithmConfig(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
     name: str
+    label: str | None = None
     hyperparams: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProblemConfig(BaseModel):
-    kind: Literal["builtin", "expression", "uploaded"] = "builtin"
+    kind: Literal["builtin", "expression", "uploaded", "external"] = "builtin"
     name: str | None = None
     problem_id: str | None = None
     n_var: int | None = None
@@ -43,6 +44,16 @@ class CreateExpressionProblemRequest(BaseModel):
     n_var: int = 10
     xl: float | list[float] = 0.0
     xu: float | list[float] = 1.0
+
+
+class CreateExternalProblemRequest(BaseModel):
+    name: str
+    command: list[str]
+    n_var: int
+    n_obj: int
+    xl: float | list[float] = 0.0
+    xu: float | list[float] = 1.0
+    timeout_sec: float = Field(default=3.0, gt=0.0, le=30.0)
 
 
 class EnvironmentTier(BaseModel):

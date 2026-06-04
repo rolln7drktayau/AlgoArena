@@ -1,4 +1,4 @@
-export type ProblemKind = "builtin" | "expression" | "uploaded";
+export type ProblemKind = "builtin" | "expression" | "uploaded" | "external";
 
 export interface HyperparamField {
   label: string;
@@ -19,6 +19,7 @@ export interface AlgorithmSpec {
 export interface AlgorithmConfig {
   id: string;
   name: string;
+  label?: string;
   enabled: boolean;
   hyperparams: Record<string, number>;
 }
@@ -240,4 +241,33 @@ export interface WorkflowSpec {
   edge_count: number;
   max_depth: number;
   source_file: string;
+}
+
+export type UserProfile = "student" | "researcher" | "curious";
+
+export interface LabRunRecord {
+  id: string;
+  run_id: string | null;
+  title: string;
+  created_at: string;
+  problem: ProblemConfig;
+  algorithms: AlgorithmConfig[];
+  leaderboard: LeaderboardEntry[];
+  summary: RunSummary | null;
+  notes: string;
+}
+
+export interface LabDocument {
+  schema_version: 1;
+  id: string;
+  title: string;
+  profile: UserProfile;
+  created_at: string;
+  updated_at: string;
+  problem: ProblemConfig;
+  algorithms: AlgorithmConfig[];
+  pinned_metrics: string[];
+  pinned_charts: string[];
+  journal: string;
+  runs: LabRunRecord[];
 }

@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from algorithms.registry import list_algorithm_specs, load_custom_algorithm_from_file
-from ..core.models import CreateExpressionProblemRequest, ScenarioRequest
+from ..core.capabilities import get_runtime_capabilities
+from ..core.domain_simulator import DomainSimulationRequest, simulate_domain
+from ..core.models import CreateExpressionProblemRequest, CreateExternalProblemRequest, ScenarioRequest
+from ..core.problem_domains import list_problem_domains
 from ..core.state import run_manager
 from ..scenario.service import simulate_scenario
 from ..scenario.workflows import get_workflow_preview, list_workflow_specs
 from problems.registry import (
     list_problem_specs,
     register_expression_problem,
+    register_external_problem,
     register_uploaded_problem,
 )
 
@@ -27,6 +32,11 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@router.get("/capabilities")
+async def capabilities() -> dict[str, object]:
+    return get_runtime_capabilities()
+
+
 @router.get("/algorithms")
 async def algorithms() -> dict[str, list[dict[str, object]]]:
     return {"algorithms": list_algorithm_specs()}
@@ -38,6 +48,14 @@ async def upload_algorithm(
     class_name: str | None = Form(default=None),
     display_name: str | None = Form(default=None),
 ) -> dict[str, str]:
+    if os.getenv("ALGOARENA_ENABLE_CUSTOM_ALGORITHM_UPLOAD") != "1":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Custom algorithm upload is disabled by default in V2 for safety. "
+                "Set ALGOARENA_ENABLE_CUSTOM_ALGORITHM_UPLOAD=1 only in a trusted local environment."
+            ),
+        )
     upload_dir = PROJECT_ROOT / "algorithms" / "custom"
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_path = upload_dir / f"{uuid4().hex}_{file.filename}"
@@ -55,6 +73,19 @@ async def upload_algorithm(
 @router.get("/problems")
 async def problems() -> dict[str, list[dict[str, object]]]:
     return {"problems": list_problem_specs()}
+
+
+@router.get("/problem-domains")
+async def problem_domains() -> dict[str, list[dict[str, object]]]:
+    return {"domains": list_problem_domains()}
+
+
+@router.post("/problem-domains/simulate")
+async def simulate_problem_domain(request: DomainSimulationRequest) -> dict[str, object]:
+    try:
+        return simulate_domain(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Domain simulation failed: {exc}") from exc
 
 
 @router.post("/problems/custom/expression")
@@ -105,6 +136,28 @@ async def upload_problem(
     return {"problem_id": problem_id, "name": name}
 
 
+@router.post("/problems/custom/external")
+async def create_external_problem(request: CreateExternalProblemRequest) -> dict[str, str]:
+    if os.getenv("ALGOARENA_ENABLE_SUBPROCESS") != "1":
+        raise HTTPException(
+            status_code=403,
+            detail="External evaluators are disabled by default. Set ALGOARENA_ENABLE_SUBPROCESS=1 in a trusted local environment.",
+        )
+    try:
+        problem_id = register_external_problem(
+            name=request.name,
+            command=request.command,
+            n_var=request.n_var,
+            n_obj=request.n_obj,
+            xl=request.xl,
+            xu=request.xu,
+            timeout_sec=request.timeout_sec,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Failed to register external problem: {exc}") from exc
+    return {"problem_id": problem_id, "name": request.name}
+
+
 @router.post("/scenario/simulate")
 async def scenario_simulate(request: ScenarioRequest) -> dict[str, object]:
     try:
@@ -149,6 +202,32 @@ async def export_pdf(run_id: str) -> FileResponse:
         media_type="application/pdf",
         filename=f"algoarena-{run_id}.pdf",
     )
+
+
+@router.get("/runs/{run_id}/export/latex")
+async def export_latex(run_id: str) -> PlainTextResponse:
+    try:
+        latex_content = run_manager.export_latex(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    headers = {"Content-Disposition": f'attachment; filename="algoarena-{run_id}.tex"'}
+    return PlainTextResponse(content=latex_content, media_type="application/x-tex", headers=headers)
+
+
+@router.get("/exports/bibtex")
+async def export_bibtex() -> PlainTextResponse:
+    headers = {"Content-Disposition": 'attachment; filename="algoarena.bib"'}
+    return PlainTextResponse(content=run_manager.export_bibtex(), media_type="application/x-bibtex", headers=headers)
+
+
+@router.get("/runs/{run_id}/export/statistics")
+async def export_statistics(run_id: str, metric: str = "hv") -> JSONResponse:
+    try:
+        payload = run_manager.export_statistics(run_id, metric=metric)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    headers = {"Content-Disposition": f'attachment; filename="algoarena-{run_id}-statistics.json"'}
+    return JSONResponse(content=payload, headers=headers)
 
 
 def _parse_bounds(raw: str) -> float | list[float]:

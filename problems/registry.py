@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import math
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
@@ -10,6 +9,10 @@ from uuid import uuid4
 import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.problems import get_problem
+
+from .external_json import ExternalJsonProblem
+from .restricted_python import load_restricted_evaluator
+from .safe_expressions import compile_safe_expression
 
 
 BUILTIN_PROBLEMS = [
@@ -103,6 +106,11 @@ def create_problem(config: dict[str, Any]) -> Problem:
                 xu=config.get("xu", 1.0),
             )
         raise ValueError("Custom problem requires a valid 'problem_id' or inline expression objectives.")
+    if kind == "external":
+        problem_id = config.get("problem_id")
+        if problem_id and problem_id in _CUSTOM_FACTORIES:
+            return _CUSTOM_FACTORIES[problem_id]()
+        raise ValueError("External problem requires a valid 'problem_id'.")
     raise ValueError(f"Unknown problem kind '{kind}'.")
 
 
@@ -194,10 +202,7 @@ def register_uploaded_problem(
     xl: float | list[float],
     xu: float | list[float],
 ) -> str:
-    module = _load_module(file_path)
-    evaluator = getattr(module, function_name, None)
-    if evaluator is None or not callable(evaluator):
-        raise ValueError(f"Function '{function_name}' was not found in uploaded problem module.")
+    evaluator = load_restricted_evaluator(file_path, function_name)
 
     problem_id = f"upload_{uuid4().hex}"
 
@@ -223,6 +228,39 @@ def register_uploaded_problem(
     return problem_id
 
 
+def register_external_problem(
+    name: str,
+    command: list[str],
+    n_var: int,
+    n_obj: int,
+    xl: float | list[float],
+    xu: float | list[float],
+    timeout_sec: float,
+) -> str:
+    problem_id = f"external_{uuid4().hex}"
+
+    def _factory() -> Problem:
+        return ExternalJsonProblem(
+            command=command,
+            n_var=n_var,
+            n_obj=n_obj,
+            xl=xl,
+            xu=xu,
+            timeout_sec=timeout_sec,
+        )
+
+    _CUSTOM_FACTORIES[problem_id] = _factory
+    _CUSTOM_SPECS[problem_id] = {
+        "problem_id": problem_id,
+        "name": name,
+        "kind": "external",
+        "n_var": n_var,
+        "n_obj": n_obj,
+        "command": command,
+    }
+    return problem_id
+
+
 def _load_module(file_path: str) -> ModuleType:
     module_name = f"problems.custom.dynamic_{uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -242,27 +280,4 @@ def _normalize_bounds(value: float | list[float], n_var: int) -> np.ndarray:
 
 
 def _compile_expression(expression: str) -> Callable[[np.ndarray], float]:
-    text = expression.strip()
-    blocked_tokens = ["__", "import", "exec", "eval", "open(", "globals(", "locals("]
-    lower_text = text.lower()
-    for token in blocked_tokens:
-        if token in lower_text:
-            raise ValueError(f"Unsupported token '{token}' in expression.")
-
-    safe_globals = {
-        "__builtins__": {},
-        "np": np,
-        "math": math,
-        "abs": abs,
-        "min": min,
-        "max": max,
-        "sum": sum,
-    }
-    if text.startswith("lambda"):
-        fn = eval(text, safe_globals, {})
-        if not callable(fn):
-            raise ValueError("Expression is not callable.")
-        return lambda x: float(fn(x))
-
-    code = compile(text, "<objective_expression>", "eval")
-    return lambda x: float(eval(code, safe_globals, {"x": x}))
+    return compile_safe_expression(expression)

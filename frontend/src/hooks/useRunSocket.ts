@@ -29,6 +29,7 @@ export const useRunSocket = () => {
       }
       state.setRunSummary(message.summary);
       state.setRunning(false);
+      useAppStore.getState().addRunToLab({ summary: message.summary });
       activeRunIdRef.current = null;
       if (wsRef.current) {
         wsRef.current.close();

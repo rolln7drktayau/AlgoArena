@@ -15,10 +15,11 @@ interface SortableAlgorithmCardProps {
   algorithm: AlgorithmConfig;
   spec: AlgorithmSpec;
   toggleAlgorithm: (algorithmId: string) => void;
+  duplicateAlgorithm: (algorithmId: string) => void;
   updateHyperparam: (algorithmId: string, key: string, value: number) => void;
 }
 
-const SortableAlgorithmCard = ({ algorithm, spec, toggleAlgorithm, updateHyperparam }: SortableAlgorithmCardProps) => {
+const SortableAlgorithmCard = ({ algorithm, spec, toggleAlgorithm, duplicateAlgorithm, updateHyperparam }: SortableAlgorithmCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: algorithm.id
   });
@@ -36,7 +37,7 @@ const SortableAlgorithmCard = ({ algorithm, spec, toggleAlgorithm, updateHyperpa
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
-          <p className="font-display text-sm text-ice">{algorithm.name}</p>
+          <p className="font-display text-sm text-ice">{algorithm.label ?? algorithm.name}</p>
           <p className="text-[10px] uppercase tracking-wide text-slate">{spec.source}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -49,6 +50,13 @@ const SortableAlgorithmCard = ({ algorithm, spec, toggleAlgorithm, updateHyperpa
             />
             Enabled
           </label>
+          <button
+            type="button"
+            onClick={() => duplicateAlgorithm(algorithm.id)}
+            className="rounded border border-stroke px-2 py-1 text-[10px] text-slate"
+          >
+            Duplicate
+          </button>
           <button
             type="button"
             aria-label={`Drag to reorder ${algorithm.name}`}
@@ -98,6 +106,7 @@ const SortableAlgorithmCard = ({ algorithm, spec, toggleAlgorithm, updateHyperpa
 export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
   const algorithms = useAppStore((state) => state.algorithms);
   const toggleAlgorithm = useAppStore((state) => state.toggleAlgorithm);
+  const duplicateAlgorithm = useAppStore((state) => state.duplicateAlgorithm);
   const updateHyperparam = useAppStore((state) => state.updateHyperparam);
   const reorderAlgorithms = useAppStore((state) => state.reorderAlgorithms);
 
@@ -192,6 +201,7 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
                   algorithm={algorithm}
                   spec={spec}
                   toggleAlgorithm={toggleAlgorithm}
+                  duplicateAlgorithm={duplicateAlgorithm}
                   updateHyperparam={updateHyperparam}
                 />
               );

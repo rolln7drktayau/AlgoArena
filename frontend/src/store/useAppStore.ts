@@ -5,12 +5,15 @@ import type {
   GenerationMessage,
   GenerationSnapshot,
   LeaderboardEntry,
+  LabDocument,
+  LabRunRecord,
   ProblemConfig,
   ProblemSpec,
-  RunSummary
+  RunSummary,
+  UserProfile
 } from "../types";
 
-type TabName = "benchmark" | "scenario" | "tutorial";
+type TabName = "benchmark" | "scenario" | "explore" | "tutorial";
 type ThemeMode = "dark" | "light";
 type AppLanguage = "fr" | "en";
 
@@ -21,6 +24,8 @@ interface ReplayState {
 }
 
 interface AppState {
+  currentLab: LabDocument | null;
+  userProfile: UserProfile | null;
   tab: TabName;
   algorithmSpecs: AlgorithmSpec[];
   algorithms: AlgorithmConfig[];
@@ -38,10 +43,17 @@ interface AppState {
   replay: ReplayState;
   theme: ThemeMode;
   language: AppLanguage;
+  setCurrentLab: (lab: LabDocument | null) => void;
+  createLab: (title?: string) => LabDocument;
+  updateLabJournal: (journal: string) => void;
+  updateLabTitle: (title: string) => void;
+  addRunToLab: (run?: Partial<LabRunRecord>) => void;
+  setUserProfile: (profile: UserProfile) => void;
   setTab: (tab: TabName) => void;
   setAlgorithmSpecs: (specs: AlgorithmSpec[]) => void;
   setProblems: (specs: ProblemSpec[]) => void;
   toggleAlgorithm: (algorithmId: string) => void;
+  duplicateAlgorithm: (algorithmId: string) => void;
   updateHyperparam: (algorithmId: string, key: string, value: number) => void;
   reorderAlgorithms: (draggedId: string, targetId: string) => void;
   setProblemConfig: (patch: Partial<ProblemConfig>) => void;
@@ -71,6 +83,8 @@ const createAlgorithmId = (name: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+const createId = (prefix: string): string => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const defaultsFromSchema = (schema: AlgorithmSpec["hyperparams"]): Record<string, number> => {
   const result: Record<string, number> = {};
@@ -104,6 +118,49 @@ const getInitialLanguage = (): AppLanguage => {
   }
   const nav = window.navigator.language.toLowerCase();
   return nav.startsWith("fr") ? "fr" : "en";
+};
+
+const getInitialProfile = (): UserProfile | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const stored = window.localStorage.getItem("algoarena-profile");
+  if (stored === "student" || stored === "researcher" || stored === "curious") {
+    return stored;
+  }
+  return null;
+};
+
+const persistProfile = (profile: UserProfile) => {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("algoarena-profile", profile);
+  }
+};
+
+const cloneAlgorithm = (algorithm: AlgorithmConfig, variantNumber: number): AlgorithmConfig => ({
+  ...algorithm,
+  id: `${createAlgorithmId(algorithm.name)}-variant-${variantNumber}-${Date.now().toString(36)}`,
+  label: `${algorithm.name} config ${variantNumber}`,
+  enabled: true,
+  hyperparams: { ...algorithm.hyperparams }
+});
+
+const buildLabFromState = (state: AppState, title = "Untitled Lab"): LabDocument => {
+  const now = new Date().toISOString();
+  return {
+    schema_version: 1,
+    id: createId("lab"),
+    title,
+    profile: state.userProfile ?? "student",
+    created_at: now,
+    updated_at: now,
+    problem: state.problemConfig,
+    algorithms: state.algorithms,
+    pinned_metrics: state.pinnedMetrics,
+    pinned_charts: [],
+    journal: "",
+    runs: []
+  };
 };
 
 const persistLanguage = (language: AppLanguage) => {
@@ -172,6 +229,8 @@ const leaderboardEquals = (a: LeaderboardEntry[], b: LeaderboardEntry[]): boolea
 };
 
 export const useAppStore = create<AppState>((set) => ({
+  currentLab: null,
+  userProfile: getInitialProfile(),
   tab: "benchmark",
   algorithmSpecs: [],
   algorithms: [],
@@ -190,12 +249,100 @@ export const useAppStore = create<AppState>((set) => ({
   theme: getInitialTheme(),
   language: getInitialLanguage(),
 
+  setCurrentLab: (lab) =>
+    set((state) => {
+      if (!lab) {
+        return { currentLab: null };
+      }
+      return {
+        currentLab: lab,
+        userProfile: lab.profile ?? state.userProfile,
+        problemConfig: lab.problem,
+        algorithms: lab.algorithms,
+        pinnedMetrics: lab.pinned_metrics.length ? lab.pinned_metrics : state.pinnedMetrics
+      };
+    }),
+
+  createLab: (title) => {
+    const state = useAppStore.getState();
+    const lab = buildLabFromState(state, title ?? "Untitled Lab");
+    set({ currentLab: lab });
+    return lab;
+  },
+
+  updateLabJournal: (journal) =>
+    set((state) => {
+      if (!state.currentLab) {
+        return state;
+      }
+      return {
+        currentLab: {
+          ...state.currentLab,
+          journal,
+          updated_at: new Date().toISOString()
+        }
+      };
+    }),
+
+  updateLabTitle: (title) =>
+    set((state) => {
+      if (!state.currentLab) {
+        return state;
+      }
+      return {
+        currentLab: {
+          ...state.currentLab,
+          title: title.trim() || "Untitled Lab",
+          updated_at: new Date().toISOString()
+        }
+      };
+    }),
+
+  addRunToLab: (run) =>
+    set((state) => {
+      const currentLab = state.currentLab ?? buildLabFromState(state);
+      const now = new Date().toISOString();
+      const record: LabRunRecord = {
+        id: createId("run"),
+        run_id: state.runId,
+        title: `Run ${currentLab.runs.length + 1}`,
+        created_at: now,
+        problem: state.problemConfig,
+        algorithms: state.algorithms,
+        leaderboard: state.leaderboard,
+        summary: state.runSummary,
+        notes: "",
+        ...run
+      };
+      return {
+        currentLab: {
+          ...currentLab,
+          problem: state.problemConfig,
+          algorithms: state.algorithms,
+          pinned_metrics: state.pinnedMetrics,
+          updated_at: now,
+          runs: [record, ...currentLab.runs]
+        }
+      };
+    }),
+
+  setUserProfile: (profile) => {
+    persistProfile(profile);
+    set((state) => ({
+      userProfile: profile,
+      currentLab: state.currentLab
+        ? { ...state.currentLab, profile, updated_at: new Date().toISOString() }
+        : state.currentLab
+    }));
+  },
+
   setTab: (tab) => set({ tab }),
 
   setAlgorithmSpecs: (specs) =>
     set((state) => {
       const existing = new Map(state.algorithms.map((algo) => [algo.name, algo]));
-      const algorithms = specs.map((spec) => {
+      const specNames = new Set(specs.map((spec) => spec.name));
+      const baseAlgorithms = specs.map((spec) => {
         const current = existing.get(spec.name);
         if (current) {
           return {
@@ -210,28 +357,58 @@ export const useAppStore = create<AppState>((set) => ({
           hyperparams: defaultsFromSchema(spec.hyperparams)
         };
       });
-      return { algorithmSpecs: specs, algorithms };
+      const variants = state.algorithms.filter((algo) => specNames.has(algo.name) && algo.label);
+      return { algorithmSpecs: specs, algorithms: [...baseAlgorithms, ...variants] };
     }),
 
   setProblems: (specs) => set({ problems: specs }),
 
   toggleAlgorithm: (algorithmId) =>
-    set((state) => ({
-      algorithms: state.algorithms.map((algo) =>
+    set((state) => {
+      const algorithms = state.algorithms.map((algo) =>
         algo.id === algorithmId ? { ...algo, enabled: !algo.enabled } : algo
-      ),
-      configRevision: state.configRevision + 1
-    })),
+      );
+      return {
+        algorithms,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, algorithms, updated_at: new Date().toISOString() }
+          : state.currentLab,
+        configRevision: state.configRevision + 1
+      };
+    }),
+
+  duplicateAlgorithm: (algorithmId) =>
+    set((state) => {
+      const source = state.algorithms.find((algo) => algo.id === algorithmId);
+      if (!source) {
+        return state;
+      }
+      const variantNumber = state.algorithms.filter((algo) => algo.name === source.name).length + 1;
+      const algorithms = [...state.algorithms, cloneAlgorithm(source, variantNumber)];
+      return {
+        algorithms,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, algorithms, updated_at: new Date().toISOString() }
+          : state.currentLab,
+        configRevision: state.configRevision + 1
+      };
+    }),
 
   updateHyperparam: (algorithmId, key, value) =>
-    set((state) => ({
-      algorithms: state.algorithms.map((algo) =>
+    set((state) => {
+      const algorithms = state.algorithms.map((algo) =>
         algo.id === algorithmId
           ? { ...algo, hyperparams: { ...algo.hyperparams, [key]: value } }
           : algo
-      ),
-      configRevision: state.configRevision + 1
-    })),
+      );
+      return {
+        algorithms,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, algorithms, updated_at: new Date().toISOString() }
+          : state.currentLab,
+        configRevision: state.configRevision + 1
+      };
+    }),
 
   reorderAlgorithms: (draggedId, targetId) =>
     set((state) => {
@@ -243,14 +420,26 @@ export const useAppStore = create<AppState>((set) => ({
       }
       const [moved] = current.splice(from, 1);
       current.splice(to, 0, moved);
-      return { algorithms: current, configRevision: state.configRevision + 1 };
+      return {
+        algorithms: current,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, algorithms: current, updated_at: new Date().toISOString() }
+          : state.currentLab,
+        configRevision: state.configRevision + 1
+      };
     }),
 
   setProblemConfig: (patch) =>
-    set((state) => ({
-      problemConfig: { ...state.problemConfig, ...patch },
-      configRevision: state.configRevision + 1
-    })),
+    set((state) => {
+      const problemConfig = { ...state.problemConfig, ...patch };
+      return {
+        problemConfig,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, problem: problemConfig, updated_at: new Date().toISOString() }
+          : state.currentLab,
+        configRevision: state.configRevision + 1
+      };
+    }),
 
   addSnapshot: (message) =>
     set((state) => {
@@ -345,11 +534,21 @@ export const useAppStore = create<AppState>((set) => ({
   togglePinnedMetric: (metric) =>
     set((state) => {
       if (state.pinnedMetrics.includes(metric)) {
+        const pinnedMetrics = state.pinnedMetrics.filter((item) => item !== metric);
         return {
-          pinnedMetrics: state.pinnedMetrics.filter((item) => item !== metric)
+          pinnedMetrics,
+          currentLab: state.currentLab
+            ? { ...state.currentLab, pinned_metrics: pinnedMetrics, updated_at: new Date().toISOString() }
+            : state.currentLab
         };
       }
-      return { pinnedMetrics: [...state.pinnedMetrics, metric] };
+      const pinnedMetrics = [...state.pinnedMetrics, metric];
+      return {
+        pinnedMetrics,
+        currentLab: state.currentLab
+          ? { ...state.currentLab, pinned_metrics: pinnedMetrics, updated_at: new Date().toISOString() }
+          : state.currentLab
+      };
     }),
 
   setReplayEnabled: (enabled) =>
@@ -391,6 +590,7 @@ export const buildRunPayload = () => {
       .map((algo) => ({
         id: algo.id,
         name: algo.name,
+        label: algo.label,
         hyperparams: algo.hyperparams
       }))
   };

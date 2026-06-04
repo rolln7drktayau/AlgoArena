@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import type { GenerationSnapshot } from "../types";
 import { downsampleScatterPoints } from "../lib/chartWorker";
+import { useAppStore } from "../store/useAppStore";
 
 const COLORS = ["#29dba6", "#f18f01", "#6bb9ff", "#f45b69", "#9b5de5", "#f9c74f", "#80ed99", "#577590"];
 
@@ -45,8 +46,30 @@ const project3D = (point: number[], angle: number): { x: number; y: number } => 
 
 export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algorithmNameById }: Props) => {
   const [selectedMetric, setSelectedMetric] = useState("hv");
+  const language = useAppStore((state) => state.language);
   const [downsampledPopByAlgorithm, setDownsampledPopByAlgorithm] = useState<Record<string, number[][]>>({});
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const text = language === "fr"
+    ? {
+        emptyTitle: "Graphiques de recherche communs",
+        emptyBody: "Ils apparaissent des qu'une competition demarre. Le front global superpose les populations finales/actuelles. La convergence globale compare une metrique generation par generation.",
+        title: "Graphiques de recherche communs",
+        metric: "Metrique de convergence",
+        pareto: "Front global de Pareto",
+        convergence: "Convergence globale",
+        paretoHelp: "Chaque couleur represente un concurrent. Plus le nuage se rapproche du front ideal et reste diversifie, meilleur est le compromis.",
+        convergenceHelp: "HV monte quand la couverture s'ameliore. IGD/GD/Epsilon baissent quand la population se rapproche du front de reference. Speed mesure le debit de generations."
+      }
+    : {
+        emptyTitle: "Common Research Charts",
+        emptyBody: "They appear as soon as a competition starts. The global front overlays current/final populations. Global convergence compares one metric generation by generation.",
+        title: "Common Research Charts",
+        metric: "Convergence Metric",
+        pareto: "Global Pareto Front",
+        convergence: "Global Convergence",
+        paretoHelp: "Each color is a competitor. A better run is closer to the ideal front while keeping a diverse spread.",
+        convergenceHelp: "HV rises when coverage improves. IGD/GD/Epsilon decrease when the population approaches the reference front. Speed measures generations per second."
+      };
 
   const latestByAlgorithm = useMemo(() => {
     const rows: Array<{ algorithmId: string; algorithmName: string; snapshot: GenerationSnapshot }> = [];
@@ -180,7 +203,8 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
   if (latestByAlgorithm.length === 0) {
     return (
       <section className="rounded-xl border border-stroke bg-card/70 p-3 text-xs text-slate">
-        Common research charts appear during/after a run.
+        <h3 className="font-display text-sm text-ice">{text.emptyTitle}</h3>
+        <p className="mt-2 leading-5">{text.emptyBody}</p>
       </section>
     );
   }
@@ -188,9 +212,12 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
   return (
     <section className="rounded-xl border border-stroke bg-card/70 p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-sm text-ice">Common Research Charts</h3>
+        <div>
+          <h3 className="font-display text-sm text-ice">{text.title}</h3>
+          <p className="mt-1 text-xs text-slate">{text.convergenceHelp}</p>
+        </div>
         <label className="text-xs text-slate">
-          Convergence Metric
+          {text.metric}
           <select
             className="ml-2 rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice"
             value={selectedMetric}
@@ -207,7 +234,8 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
 
       <div className="grid gap-3 xl:grid-cols-2">
         <div className="rounded-lg border border-stroke bg-ink/60 p-2">
-          <p className="mb-2 text-xs text-slate">Global Pareto Front</p>
+          <p className="mb-1 text-xs text-slate">{text.pareto}</p>
+          <p className="mb-2 text-[11px] text-slate">{text.paretoHelp}</p>
           {objectiveCount >= 3 ? (
             <svg ref={svgRef} width="100%" height="260" viewBox="0 0 560 260" preserveAspectRatio="xMidYMid meet" />
           ) : (
@@ -236,7 +264,8 @@ export const CommonResearchPanel = ({ objectiveCount, snapshotsByAlgorithm, algo
         </div>
 
         <div className="rounded-lg border border-stroke bg-ink/60 p-2">
-          <p className="mb-2 text-xs text-slate">Global Convergence ({selectedMetric})</p>
+          <p className="mb-1 text-xs text-slate">{text.convergence} ({selectedMetric})</p>
+          <p className="mb-2 text-[11px] text-slate">{text.convergenceHelp}</p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={mergedConvergenceData}>

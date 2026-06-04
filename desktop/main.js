@@ -35,7 +35,7 @@ function isBackendExportUrl(rawUrl) {
     if (parsed.hostname !== "127.0.0.1" || parsed.port !== "8000") {
       return false;
     }
-    return /^\/api\/runs\/[^/]+\/export\/(csv|pdf)$/.test(parsed.pathname);
+    return /^\/api\/runs\/[^/]+\/export\/(csv|pdf|latex)$/.test(parsed.pathname) || parsed.pathname === "/api/exports/bibtex";
   } catch (_) {
     return false;
   }
@@ -60,6 +60,18 @@ function resolvePythonBootstrapCommand(appRoot) {
   const localVenvWin = path.join(appRoot, ".venv", "Scripts", "python.exe");
   const localVenvPosix = path.join(appRoot, ".venv", "bin", "python3");
   const localVenvPosixAlt = path.join(appRoot, ".venv", "bin", "python");
+  const portableWin = path.join(appRoot, "desktop", "python", "python.exe");
+  const portablePosix = path.join(appRoot, "desktop", "python", "bin", "python3");
+  const portablePosixAlt = path.join(appRoot, "desktop", "python", "bin", "python");
+  if (fs.existsSync(portableWin)) {
+    return portableWin;
+  }
+  if (fs.existsSync(portablePosix)) {
+    return portablePosix;
+  }
+  if (fs.existsSync(portablePosixAlt)) {
+    return portablePosixAlt;
+  }
   if (fs.existsSync(localVenvWin)) {
     return localVenvWin;
   }

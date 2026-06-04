@@ -4,12 +4,15 @@ import { AlgorithmComparisonGrid } from "./components/AlgorithmComparisonGrid";
 import { CommonResearchPanel } from "./components/CommonResearchPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Leaderboard } from "./components/Leaderboard";
+import { LabsPanel } from "./components/LabsPanel";
 import { MetricPins } from "./components/MetricPins";
 import { ProblemConfigPanel } from "./components/ProblemConfigPanel";
+import { ProfileSetup } from "./components/ProfileSetup";
 import { RadarSummary } from "./components/RadarSummary";
 import { ReplayControls } from "./components/ReplayControls";
 import { ScenarioTab } from "./components/ScenarioTab";
 import { TutorialTab } from "./components/TutorialTab";
+import { V2ExploreTab } from "./components/V2ExploreTab";
 import { useRunSocket } from "./hooks/useRunSocket";
 import { buildApiUrl } from "./lib/api";
 import { buildRunPayload, useAppStore } from "./store/useAppStore";
@@ -27,6 +30,7 @@ const uiText: Record<
     themeDark: string;
     tabBenchmark: string;
     tabScenario: string;
+    tabExplore: string;
     tabTutorial: string;
     errorNoAlgo: string;
     scenarioTitle: string;
@@ -38,6 +42,9 @@ const uiText: Record<
     stop: string;
     exportCsv: string;
     exportPdf: string;
+    exportLatex: string;
+    exportBibtex: string;
+    exportStats: string;
     errorPrefix: string;
     leaderboardTitle: string;
     radarTitle: string;
@@ -53,6 +60,7 @@ const uiText: Record<
     themeDark: "Theme sombre",
     tabBenchmark: "Benchmark",
     tabScenario: "Scenario Simulator",
+    tabExplore: "Exploration V2",
     tabTutorial: "Tutoriel",
     errorNoAlgo: "Active au moins un algorithme avant de lancer.",
     scenarioTitle: "Scenario Simulator",
@@ -64,6 +72,9 @@ const uiText: Record<
     stop: "Stop",
     exportCsv: "Exporter CSV",
     exportPdf: "Exporter PDF",
+    exportLatex: "Exporter LaTeX",
+    exportBibtex: "BibTeX",
+    exportStats: "Stats JSON",
     errorPrefix: "Erreur",
     leaderboardTitle: "Classement",
     radarTitle: "Comparaison Radar",
@@ -78,6 +89,7 @@ const uiText: Record<
     themeDark: "Dark Theme",
     tabBenchmark: "Benchmark",
     tabScenario: "Scenario Simulator",
+    tabExplore: "V2 Explore",
     tabTutorial: "Tutorial",
     errorNoAlgo: "Enable at least one algorithm before starting.",
     scenarioTitle: "Scenario Simulator",
@@ -89,6 +101,9 @@ const uiText: Record<
     stop: "Stop",
     exportCsv: "Export CSV",
     exportPdf: "Export PDF",
+    exportLatex: "Export LaTeX",
+    exportBibtex: "BibTeX",
+    exportStats: "Stats JSON",
     errorPrefix: "Error",
     leaderboardTitle: "Leaderboard",
     radarTitle: "Radar Comparison",
@@ -130,20 +145,35 @@ const triggerBlobDownload = (fileName: string, blob: Blob): void => {
   window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 };
 
-const exportRun = async (runId: string, kind: "csv" | "pdf"): Promise<void> => {
+const exportRun = async (runId: string, kind: "csv" | "pdf" | "latex" | "statistics"): Promise<void> => {
   const url = buildApiUrl(`/api/runs/${runId}/export/${kind}`);
   try {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Export failed with status ${response.status}`);
     }
-    const fallbackName = `run-${runId}.${kind}`;
+    const fallbackName = `run-${runId}.${kind === "latex" ? "tex" : kind === "statistics" ? "json" : kind}`;
     const fileName = extractFilename(response.headers.get("content-disposition"), fallbackName);
     const blob = await response.blob();
     triggerBlobDownload(fileName, blob);
   } catch (error) {
     console.error("Unable to export run.", error);
     useAppStore.getState().setSocketError("Export failed. Please retry once the run is completed.");
+  }
+};
+
+const exportBibtex = async (): Promise<void> => {
+  try {
+    const response = await fetch(buildApiUrl("/api/exports/bibtex"));
+    if (!response.ok) {
+      throw new Error(`Export failed with status ${response.status}`);
+    }
+    const fileName = extractFilename(response.headers.get("content-disposition"), "algoarena.bib");
+    const blob = await response.blob();
+    triggerBlobDownload(fileName, blob);
+  } catch (error) {
+    console.error("Unable to export BibTeX.", error);
+    useAppStore.getState().setSocketError("BibTeX export failed.");
   }
 };
 
@@ -271,6 +301,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-panel text-ice">
+      <ProfileSetup />
       {startupInfo && (
         <div className="pointer-events-none fixed right-4 top-4 z-[60] w-full max-w-md md:right-6 md:top-6">
           <div className="pointer-events-auto rounded-xl border border-stroke bg-card/95 p-4 shadow-glow backdrop-blur">
@@ -340,6 +371,13 @@ export default function App() {
             </button>
             <button
               type="button"
+              onClick={() => setTab("explore")}
+              className={`rounded-lg px-3 py-2 ${tab === "explore" ? "bg-accent text-ink" : "text-slate"}`}
+            >
+              {t.tabExplore}
+            </button>
+            <button
+              type="button"
               onClick={() => setTab("tutorial")}
               className={`rounded-lg px-3 py-2 ${tab === "tutorial" ? "bg-accent text-ink" : "text-slate"}`}
             >
@@ -361,8 +399,15 @@ export default function App() {
             </ErrorBoundary>
           )}
 
+          {tab === "explore" && (
+            <ErrorBoundary title={t.tabExplore}>
+              <V2ExploreTab />
+            </ErrorBoundary>
+          )}
+
           {tab === "benchmark" && (
             <>
+              <LabsPanel />
               <section className="grid gap-4 xl:grid-cols-[1.1fr_1.2fr]">
                 <div className="space-y-4">
                   <ErrorBoundary title={t.problemDefTitle}>
@@ -413,6 +458,37 @@ export default function App() {
                         className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
                       >
                         {t.exportPdf}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!runId}
+                        onClick={() => {
+                          if (runId) {
+                            void exportRun(runId, "latex");
+                          }
+                        }}
+                        className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
+                      >
+                        {t.exportLatex}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void exportBibtex()}
+                        className="rounded-md border border-stroke px-4 py-2 text-sm text-slate"
+                      >
+                        {t.exportBibtex}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!runId}
+                        onClick={() => {
+                          if (runId) {
+                            void exportRun(runId, "statistics");
+                          }
+                        }}
+                        className="rounded-md border border-stroke px-4 py-2 text-sm text-slate disabled:opacity-40"
+                      >
+                        {t.exportStats}
                       </button>
                     </div>
                     {socketError && <p className="mt-3 text-xs text-rose-300">{t.errorPrefix}: {socketError}</p>}
