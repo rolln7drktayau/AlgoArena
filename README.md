@@ -110,25 +110,14 @@ npm run dev
 - Backend API: `http://localhost:8000`
 - OpenAPI docs: `http://localhost:8000/docs`
 
-## Deploy Online (Professor Demo Branch)
+## Branches and Public Demo
 
-Use branch `web/prof-demo` to host a public demo URL with one service (FastAPI + built React SPA).
+AlgoArena keeps two long-lived branches:
 
-### What this branch adds
+- `release/v1.0`: frozen V1 baseline.
+- `develop/v2`: active V2 development and GitHub Pages demo source.
 
-- A root `Dockerfile` that builds the frontend and runs the backend.
-- FastAPI serves `frontend/dist` in production (same domain for API + WebSocket).
-- `render.yaml` for Render Blueprint deployment.
-
-### Deploy on Render
-
-1. Push branch `web/prof-demo` to GitHub.
-2. In Render: `New` -> `Blueprint`.
-3. Connect your repo and choose branch `web/prof-demo`.
-4. Confirm service creation from `render.yaml`.
-5. Wait for build/deploy, then open the generated URL.
-
-The app and backend are served together, so the WebSocket endpoints (`/ws/run`, `/ws/scenario`) work directly from the same domain.
+The GitHub Pages demo is served from `docs/` on `develop/v2`. It is intentionally serverless: no Docker, no backend, no cloud database. The full app still runs locally with FastAPI, WebSockets and pymoo through `npm run local:dev`.
 
 ## One-Command Startup Scripts
 

@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - develop/v2
-      - main
-      - master
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"

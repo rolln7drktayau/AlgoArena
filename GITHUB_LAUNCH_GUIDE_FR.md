@@ -1,14 +1,13 @@
 # Lancer AlgoArena depuis GitHub
 
-## Pourquoi la demo prof ne marche pas encore
+## Branches attendues
 
-Actuellement, les changements V2 sont sur ta machine, branche `develop/v2`, mais ils ne sont pas encore sur GitHub tant que tu n'as pas fait `commit` puis `push`.
+Le depot doit rester simple :
 
-Etat attendu pour que GitHub puisse servir quelque chose :
+- `release/v1.0` : V1 figee.
+- `develop/v2` : V2 active et source du deploiement GitHub Pages.
 
-- `develop/v2` doit etre pousse sur GitHub.
-- GitHub Pages doit etre active.
-- Pour la demo prof Render, une branche `web/prof-demo` doit exister sur GitHub.
+Si `master` apparait encore sur GitHub, c'est uniquement parce que GitHub refuse de supprimer la branche par defaut. Il faut d'abord changer la branche par defaut dans `Settings` -> `Branches` -> `Default branch` vers `develop/v2`, puis supprimer `master`.
 
 ## Option A - Demo immediate GitHub Pages
 
@@ -49,66 +48,7 @@ Le workflow deploye le dossier :
 docs/
 ```
 
-## Option B - Demo prof complete avec backend sur Render
-
-Cette version utilise :
-
-- Dockerfile ;
-- FastAPI ;
-- frontend build ;
-- WebSockets ;
-- pymoo cote serveur.
-
-Elle est plus proche de l'app complete.
-
-### Creer et pousser la branche prof
-
-Depuis `develop/v2` :
-
-```powershell
-git switch develop/v2
-git switch -c web/prof-demo
-git push -u origin web/prof-demo
-```
-
-Si la branche existe deja :
-
-```powershell
-git switch web/prof-demo
-git merge develop/v2
-git push
-```
-
-### Sur Render
-
-1. Va sur https://render.com
-2. `New`
-3. `Blueprint`
-4. Connecte le repo GitHub `AlgoArena`
-5. Choisis la branche `web/prof-demo`
-6. Render lit `render.yaml`
-7. Il build avec `Dockerfile`
-8. Il donne une URL publique
-
-Health check :
-
-```text
-/api/health
-```
-
-App :
-
-```text
-/
-```
-
-Docs API :
-
-```text
-/docs
-```
-
-## Option C - Lancer en local depuis un clone GitHub
+## Option B - Lancer en local depuis un clone GitHub
 
 Quelqu'un clone le repo :
 
@@ -157,7 +97,6 @@ npm run local:stop
 ## Resume rapide
 
 - **GitHub Pages** : lien demo leger, sans serveur.
-- **Render prof demo** : vraie app web avec backend.
 - **Local** : version complete pour travailler.
 - **Desktop** : installateur a construire.
 - **CLI** : usage scripts/recherche.
