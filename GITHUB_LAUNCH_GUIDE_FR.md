@@ -42,6 +42,8 @@ git push -u origin develop/v2
 6. Lance ou attends le workflow `Deploy GitHub Pages Demo`.
 7. Quand il est vert, l'URL apparait dans le resume du workflow.
 
+Important : si le workflow affiche `Resource not accessible by integration` ou `Get Pages site failed`, ce n'est pas un bug de l'app. Cela veut dire que GitHub Pages n'a pas encore ete active une premiere fois dans `Settings` -> `Pages`. Active `GitHub Actions`, sauvegarde, puis relance le workflow.
+
 Le workflow deploye le dossier :
 
 ```text

@@ -9,6 +9,7 @@ Branche V1 figee : `release/v1.0`
 - Localement, il reste uniquement `release/v1.0` et `develop/v2`.
 - Sur GitHub, `web/prof-demo` a ete supprimee.
 - `master` existe encore cote GitHub uniquement parce que c'est la branche par defaut actuelle. GitHub refuse sa suppression tant que la branche par defaut n'est pas basculee vers `develop/v2`.
+- Le workflow GitHub Pages est pousse sur `develop/v2`. Si GitHub affiche `Resource not accessible by integration`, Pages doit etre active manuellement une premiere fois dans `Settings` -> `Pages` -> `Source: GitHub Actions`.
 
 Action GitHub restante :
 
