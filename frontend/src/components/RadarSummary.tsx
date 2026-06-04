@@ -8,6 +8,7 @@ import {
   Tooltip
 } from "recharts";
 import type { LeaderboardEntry, RunSummary } from "../types";
+import { useAppStore } from "../store/useAppStore";
 
 const RADAR_KEYS = [
   { key: "hv", label: "HV" },
@@ -108,6 +109,7 @@ export const RadarSummary = ({
   leaderboard: LeaderboardEntry[];
   isRunning: boolean;
 }) => {
+  const language = useAppStore((state) => state.language);
   const finalRadar = summary?.radar ?? [];
   const liveRadar = buildLiveRadar(leaderboard);
   const radarRows = finalRadar.length > 0 ? finalRadar : liveRadar;
@@ -115,7 +117,9 @@ export const RadarSummary = ({
   if (radarRows.length === 0) {
     return (
       <section className="rounded-xl border border-stroke bg-card/70 p-3 text-xs text-slate">
-        {isRunning ? "Live radar appears after first generations arrive." : "Final comparison radar appears when the run completes."}
+        {isRunning
+          ? language === "fr" ? "Le radar en direct apparait apres les premieres generations." : "Live radar appears after first generations arrive."
+          : language === "fr" ? "Le radar final apparait quand le run est termine." : "Final comparison radar appears when the run completes."}
       </section>
     );
   }

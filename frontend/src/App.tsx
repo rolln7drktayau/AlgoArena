@@ -55,6 +55,16 @@ const uiText: Record<
     researchChartsTitle: string;
     languageFr: string;
     languageEn: string;
+    studentBanner: string;
+    researcherBanner: string;
+    curiousTitle: string;
+    curiousBody: string;
+    saveResults: string;
+    step3Title: string;
+    step3Hint: string;
+    explainButton: string;
+    statsHint: string;
+    plainExplanation: string;
   }
 > = {
   fr: {
@@ -84,7 +94,17 @@ const uiText: Record<
     competitionGridTitle: "Panneaux concurrents",
     researchChartsTitle: "Comparaison globale",
     languageFr: "Francais",
-    languageEn: "English"
+    languageEn: "English",
+    studentBanner: "Mode Etudiant : interface simplifiee. Passe en mode Chercheur pour acceder a tous les outils.",
+    researcherBanner: "Mode Chercheur : tous les outils disponibles.",
+    curiousTitle: "Pas besoin de tout comprendre.",
+    curiousBody: "Lance quelque chose et observe ce qui se passe.",
+    saveResults: "Sauvegarder mes resultats",
+    step3Title: "ETAPE 3",
+    step3Hint: "Lance la competition puis regarde la convergence.",
+    explainButton: "Que se passe-t-il ?",
+    statsHint: "Repetitions et tests statistiques disponibles dans les exports : Wilcoxon, Kruskal-Wallis, intervalles de confiance.",
+    plainExplanation: "L'app lance les memes problemes avec plusieurs algorithmes. Un bon algorithme fait monter HV, baisse IGD, et se stabilise sans rester bloque trop tot."
   },
   en: {
     subtitle: "Real-time benchmarking for multi-objective optimization algorithms",
@@ -113,7 +133,17 @@ const uiText: Record<
     competitionGridTitle: "Competitor Panels",
     researchChartsTitle: "Global Comparison",
     languageFr: "Francais",
-    languageEn: "English"
+    languageEn: "English",
+    studentBanner: "Student mode: simplified interface. Switch to Researcher mode to access every tool.",
+    researcherBanner: "Researcher mode: every tool is available.",
+    curiousTitle: "You do not need to understand everything.",
+    curiousBody: "Launch something and watch what happens.",
+    saveResults: "Save my results",
+    step3Title: "STEP 3",
+    step3Hint: "Start the competition, then watch convergence.",
+    explainButton: "What is happening?",
+    statsHint: "Repetitions and statistical tests are available in exports: Wilcoxon, Kruskal-Wallis, confidence intervals.",
+    plainExplanation: "The app runs the same problem with several algorithms. A good algorithm raises HV, lowers IGD, and stabilizes without getting stuck too early."
   }
 };
 
@@ -416,18 +446,18 @@ export default function App() {
             <>
               {profileFilter.showStudentBanner && (
                 <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
-                  Mode Etudiant : interface simplifiee. Passe en mode Chercheur pour acceder a tous les outils.
+                  {t.studentBanner}
                 </section>
               )}
               {profileFilter.showResearcherBanner && (
                 <section className="rounded-xl border border-stroke bg-card/70 p-4 text-sm text-slate">
-                  Mode Chercheur : tous les outils disponibles.
+                  {t.researcherBanner}
                 </section>
               )}
               {profileFilter.showCuriousBanner && (
                 <section className="rounded-xl border border-accent/50 bg-accent/10 p-4">
-                  <p className="font-display text-lg text-ice">Pas besoin de tout comprendre.</p>
-                  <p className="mt-1 text-sm text-slate">Lance quelque chose et observe ce qui se passe.</p>
+                  <p className="font-display text-lg text-ice">{t.curiousTitle}</p>
+                  <p className="mt-1 text-sm text-slate">{t.curiousBody}</p>
                   <div className="mt-3">
                     <SurpriseMeButton />
                   </div>
@@ -437,7 +467,7 @@ export default function App() {
                 <LabsPanel />
               ) : (
                 <details className="rounded-xl border border-stroke bg-card/60 p-3 text-xs text-slate">
-                  <summary className="cursor-pointer text-ice">Sauvegarder mes resultats</summary>
+                  <summary className="cursor-pointer text-ice">{t.saveResults}</summary>
                   <div className="mt-3">
                     <LabsPanel />
                   </div>
@@ -455,8 +485,8 @@ export default function App() {
               <section className="grid gap-8 xl:grid-cols-[1fr_1.1fr]">
                   <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
                     <div className="mb-4 space-y-1">
-                      <p className="text-sm font-bold text-ice">ETAPE 3</p>
-                      <p className="text-xs italic text-slate">Lance la competition puis regarde la convergence.</p>
+                      <p className="text-sm font-bold text-ice">{t.step3Title}</p>
+                      <p className="text-xs italic text-slate">{t.step3Hint}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
@@ -533,17 +563,17 @@ export default function App() {
                         onClick={() => setShowPlainExplanation((value) => !value)}
                         className="rounded-md border border-accent/50 px-4 py-2 text-sm text-accent"
                       >
-                        Que se passe-t-il ?
+                        {t.explainButton}
                       </button>
                     </div>
                     {profileFilter.showStatTests && (
                       <div className="mt-3 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">
-                        Repetitions et tests statistiques disponibles dans les exports : Wilcoxon, Kruskal-Wallis, intervalles de confiance.
+                        {t.statsHint}
                       </div>
                     )}
                     {showPlainExplanation && (
                       <div className="mt-3 rounded-lg border border-accent/30 bg-accent/10 p-3 text-xs leading-5 text-slate">
-                        L'app lance les memes problemes avec plusieurs algorithmes. Un bon algorithme fait monter HV, baisse IGD, et se stabilise sans rester bloque trop tot.
+                        {t.plainExplanation}
                       </div>
                     )}
                     {socketError && <p className="mt-3 text-xs text-rose-300">{t.errorPrefix}: {socketError}</p>}

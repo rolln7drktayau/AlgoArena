@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { GenerationSnapshot } from "../types";
+import { useAppStore } from "../store/useAppStore";
 
 const COLOR_MAP: Record<string, string> = {
   hv: "#29dba6",
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const MetricsChart = ({ snapshots, pinnedMetrics }: Props) => {
+  const language = useAppStore((state) => state.language);
   const data = useMemo(
     () => {
       return snapshots.map((snapshot) => {
@@ -35,7 +37,7 @@ export const MetricsChart = ({ snapshots, pinnedMetrics }: Props) => {
   );
 
   if (snapshots.length === 0) {
-    return <div className="h-52 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">No metrics yet.</div>;
+    return <div className="h-52 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">{language === "fr" ? "Aucune metrique pour le moment." : "No metrics yet."}</div>;
   }
 
   return (

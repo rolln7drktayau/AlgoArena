@@ -25,15 +25,19 @@ interface SortableComparisonCardProps {
   current: GenerationSnapshot | null;
   history: GenerationSnapshot[];
   pinnedMetrics: string[];
+  language: "fr" | "en";
 }
 
-const SortableComparisonCard = ({ algorithm, objectiveCount, current, history, pinnedMetrics }: SortableComparisonCardProps) => {
+const SortableComparisonCard = ({ algorithm, objectiveCount, current, history, pinnedMetrics, language }: SortableComparisonCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: algorithm.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
   };
 
+  const dragLabel = language === "fr" ? "Deplacer" : "Drag";
+  const generationLabel = language === "fr" ? "Generation" : "Generation";
+  const elapsedLabel = language === "fr" ? "Temps" : "Elapsed";
   return (
     <article
       ref={setNodeRef}
@@ -44,28 +48,28 @@ const SortableComparisonCard = ({ algorithm, objectiveCount, current, history, p
         <div>
           <h4 className="font-display text-base text-ice">{algorithm.label ?? algorithm.name}</h4>
           <p className="text-xs text-slate">
-            Generation {current?.generation ?? 0} | Elapsed {current?.elapsed_sec.toFixed(2) ?? "0.00"}s
+            {generationLabel} {current?.generation ?? 0} | {elapsedLabel} {current?.elapsed_sec.toFixed(2) ?? "0.00"}s
           </p>
         </div>
         <button
           type="button"
-          aria-label={`Drag to reorder ${algorithm.name}`}
+          aria-label={`${dragLabel} ${algorithm.name}`}
           className="cursor-grab rounded border border-stroke px-2 py-1 text-[10px] text-slate active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
-          Drag
+          {dragLabel}
         </button>
       </div>
 
       <div className="grid gap-3">
-        <ErrorBoundary title={`${algorithm.name} Pareto Front`}>
+        <ErrorBoundary title={`${algorithm.name} ${language === "fr" ? "front de Pareto" : "Pareto Front"}`}>
           <ParetoChart snapshot={current} objectives={objectiveCount} />
         </ErrorBoundary>
-        <ErrorBoundary title={`${algorithm.name} Convergence`}>
+        <ErrorBoundary title={`${algorithm.name} ${language === "fr" ? "convergence" : "Convergence"}`}>
           <MetricsChart snapshots={history} pinnedMetrics={pinnedMetrics} />
         </ErrorBoundary>
-        <ErrorBoundary title={`${algorithm.name} Diversity`}>
+        <ErrorBoundary title={`${algorithm.name} ${language === "fr" ? "diversite" : "Diversity"}`}>
           <DiversityHeatmap matrix={current?.heatmap ?? []} />
         </ErrorBoundary>
       </div>
@@ -93,7 +97,7 @@ export const AlgorithmComparisonGrid = ({ objectiveCount }: { objectiveCount: nu
         body: "Choisis les concurrents que tu veux observer ici. Cela ne change pas les algorithmes lances, seulement les panneaux affiches.",
         showAll: "Tout afficher",
         hideAll: "Tout masquer",
-        drag: "Utilise Drag pour reordonner les cartes.",
+        drag: "Utilise Deplacer pour reordonner les cartes.",
         empty: "Aucun panneau selectionne. Affiche tout ou coche quelques concurrents.",
         noAlgo: "Aucun algorithme actif. Active au moins un algorithme dans la bibliotheque."
       }
@@ -203,6 +207,7 @@ export const AlgorithmComparisonGrid = ({ objectiveCount }: { objectiveCount: nu
                   current={current}
                   history={history}
                   pinnedMetrics={pinnedMetrics}
+                  language={language}
                 />
               );
             })}

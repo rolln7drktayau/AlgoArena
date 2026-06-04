@@ -82,24 +82,18 @@ const defaultRows: EnvRow[] = [
 
 const scenarioPresets = {
   quick: {
-    label: "Demo rapide",
-    description: "3 tiers, 10 taches, objectifs latence + cout.",
     taskCount: 10,
     generations: 12,
     populationSize: 30,
     rows: defaultRows.map((row) => ({ ...row, values: { ...row.values, devices: 3 } }))
   },
   medium: {
-    label: "Cas d'usage moyen",
-    description: "Configuration equilibree pour comparer plusieurs algorithmes sans attendre trop longtemps.",
     taskCount: 30,
     generations: 35,
     populationSize: 70,
     rows: defaultRows
   },
   stress: {
-    label: "Stress test",
-    description: "Plus de taches et plus de generations pour tester la robustesse.",
     taskCount: 80,
     generations: 80,
     populationSize: 120,
@@ -107,14 +101,14 @@ const scenarioPresets = {
   }
 };
 
-const envColumns: Array<{ key: keyof ScenarioEnvironment; label: string; help: string }> = [
-  { key: "devices", label: "Appareils", help: "Nombre de machines disponibles dans ce niveau." },
-  { key: "processing_rate", label: "Vitesse (taches/s)", help: "Plus la vitesse est haute, plus les taches finissent vite." },
-  { key: "processing_cost", label: "Cout (EUR/tache)", help: "Cout moyen pour traiter une tache." },
-  { key: "idle_power", label: "Conso repos (W)", help: "Energie consommee quand le niveau attend." },
-  { key: "working_power", label: "Conso active (W)", help: "Energie consommee quand le niveau travaille." },
-  { key: "uplink_bandwidth", label: "Bande montante (Mbps)", help: "Debit pour envoyer les donnees vers le niveau suivant." },
-  { key: "downlink_bandwidth", label: "Bande descendante (Mbps)", help: "Debit pour recuperer les resultats." }
+const envColumnKeys: Array<keyof ScenarioEnvironment> = [
+  "devices",
+  "processing_rate",
+  "processing_cost",
+  "idle_power",
+  "working_power",
+  "uplink_bandwidth",
+  "downlink_bandwidth"
 ];
 
 const makeSyntheticTasks = (count: number) =>
@@ -255,6 +249,7 @@ const summarizeServerError = (raw: string): string => {
 
 export const ScenarioTab = () => {
   const allAlgorithms = useAppStore((state) => state.algorithms);
+  const language = useAppStore((state) => state.language);
   const [rows, setRows] = useState<EnvRow[]>(defaultRows);
   const [taskCount, setTaskCount] = useState(20);
   const [workflowSpecs, setWorkflowSpecs] = useState<WorkflowSpec[]>([]);
@@ -282,6 +277,109 @@ export const ScenarioTab = () => {
     () => allAlgorithms.filter((algo) => algo.enabled).map((algo) => algo.name),
     [allAlgorithms]
   );
+  const t = language === "fr"
+    ? {
+        title: "Simuler Edge/Fog/Cloud",
+        body: "Configure un environnement Edge/Fog/Cloud, choisis un preset, puis compare les plans de placement.",
+        workflowsLoaded: "Workflows charges",
+        transfers: "Les fleches representent les transferts et la latence entre niveaux.",
+        manualTasks: "Taches synthetiques manuelles",
+        workflowPreset: "Preset workflow",
+        workflowTaskLimit: "Limite de taches workflow",
+        tasks: "Taches",
+        addTier: "Ajouter un niveau",
+        population: "Population",
+        generations: "Generations",
+        repetitions: "Repetitions",
+        baseSeed: "Graine",
+        optional: "optionnel",
+        simulate: "Simuler le placement",
+        simulating: "Simulation...",
+        resetRun: "Reinitialiser la simulation",
+        selectedWorkflow: "Workflow choisi",
+        edges: "liens",
+        depth: "profondeur",
+        objectivesManual: "Objectifs manuels",
+        objectivesHelp: "Configure au moins 2 objectifs. Les objectifs integres incluent latence, cout, energie, makespan et vitesse d'execution. Tu peux aussi definir des objectifs par expression.",
+        name: "Nom",
+        key: "Cle",
+        customExpression: "Expression personnalisee",
+        direction: "Direction",
+        minimize: "Minimiser",
+        maximize: "Maximiser",
+        target: "Cible",
+        expressionLabel: "Expression",
+        remove: "Retirer",
+        addObjective: "Ajouter un objectif",
+        resetObjectives: "Reinitialiser",
+        scenarioRunning: "Simulation en cours",
+        level: "Niveau",
+        presets: {
+          quick: ["Demo rapide", "3 tiers, 10 taches, objectifs latence + cout."],
+          medium: ["Cas d'usage moyen", "Configuration equilibree pour comparer plusieurs algorithmes sans attendre trop longtemps."],
+          stress: ["Stress test", "Plus de taches et plus de generations pour tester la robustesse."]
+        },
+        columns: {
+          devices: ["Appareils", "Nombre de machines disponibles dans ce niveau."],
+          processing_rate: ["Vitesse (taches/s)", "Plus la vitesse est haute, plus les taches finissent vite."],
+          processing_cost: ["Cout (EUR/tache)", "Cout moyen pour traiter une tache."],
+          idle_power: ["Conso repos (W)", "Energie consommee quand le niveau attend."],
+          working_power: ["Conso active (W)", "Energie consommee quand le niveau travaille."],
+          uplink_bandwidth: ["Bande montante (Mbps)", "Debit pour envoyer les donnees vers le niveau suivant."],
+          downlink_bandwidth: ["Bande descendante (Mbps)", "Debit pour recuperer les resultats."]
+        }
+      }
+    : {
+        title: "Edge/Fog/Cloud Simulator",
+        body: "Configure an Edge/Fog/Cloud environment, choose a preset, then compare scheduling plans.",
+        workflowsLoaded: "Workflows loaded",
+        transfers: "Arrows represent transfers and latency between tiers.",
+        manualTasks: "Manual synthetic tasks",
+        workflowPreset: "Workflow preset",
+        workflowTaskLimit: "Workflow task limit",
+        tasks: "Tasks",
+        addTier: "Add tier",
+        population: "Population",
+        generations: "Generations",
+        repetitions: "Repetitions",
+        baseSeed: "Base seed",
+        optional: "optional",
+        simulate: "Simulate Scheduling",
+        simulating: "Simulating...",
+        resetRun: "Reset Simulation Run",
+        selectedWorkflow: "Selected workflow",
+        edges: "edges",
+        depth: "depth",
+        objectivesManual: "Objectives (Manual)",
+        objectivesHelp: "Configure at least 2 objectives. Built-ins include latency, cost, energy, makespan, and execution speed. You can also define expression-based objectives.",
+        name: "Name",
+        key: "Key",
+        customExpression: "Custom expression",
+        direction: "Direction",
+        minimize: "Minimize",
+        maximize: "Maximize",
+        target: "Target",
+        expressionLabel: "Expression",
+        remove: "Remove",
+        addObjective: "Add Objective",
+        resetObjectives: "Reset",
+        scenarioRunning: "Scenario running",
+        level: "Tier",
+        presets: {
+          quick: ["Quick demo", "3 tiers, 10 tasks, latency + cost objectives."],
+          medium: ["Medium use case", "Balanced configuration to compare several algorithms without waiting too long."],
+          stress: ["Stress test", "More tasks and generations to test robustness."]
+        },
+        columns: {
+          devices: ["Devices", "Number of machines available in this tier."],
+          processing_rate: ["Speed (tasks/s)", "Higher speed makes tasks finish faster."],
+          processing_cost: ["Cost (EUR/task)", "Average cost to process one task."],
+          idle_power: ["Idle power (W)", "Energy consumed while this tier waits."],
+          working_power: ["Active power (W)", "Energy consumed while this tier works."],
+          uplink_bandwidth: ["Uplink bandwidth (Mbps)", "Throughput for sending data to the next tier."],
+          downlink_bandwidth: ["Downlink bandwidth (Mbps)", "Throughput for retrieving results."]
+        }
+      };
   const selectedWorkflow = useMemo(
     () => workflowSpecs.find((item) => item.workflow_id === selectedWorkflowId) ?? null,
     [selectedWorkflowId, workflowSpecs]
@@ -379,7 +477,7 @@ export const ScenarioTab = () => {
     setPopulationSize(next.populationSize);
     setSelectedWorkflowId("");
     setWorkflowTaskLimit("");
-    setFeedback(next.description);
+    setFeedback(t.presets[preset][1]);
   };
 
   const clearScenarioRunState = useCallback(() => {
@@ -546,7 +644,7 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_steps ?? 0}/${
+                `${t.scenarioRunning}... ${message.completed_steps ?? 0}/${
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
                 } repetitions complete.`
               );
@@ -609,7 +707,7 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_steps ?? message.repeat_index}/${
+                `${t.scenarioRunning}... ${message.completed_steps ?? message.repeat_index}/${
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
                 } repetitions complete.`
               );
@@ -625,7 +723,7 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_steps ?? message.repeat_index}/${
+                `${t.scenarioRunning}... ${message.completed_steps ?? message.repeat_index}/${
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, message.repetitions ?? repetitions)
                 } repetitions complete (with some errors).`
               );
@@ -646,7 +744,7 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_steps ?? 0}/${
+                `${t.scenarioRunning}... ${message.completed_steps ?? 0}/${
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
                 } repetitions complete.`
               );
@@ -666,7 +764,7 @@ export const ScenarioTab = () => {
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
               });
               setFeedback(
-                `Scenario running... ${message.completed_steps ?? 0}/${
+                `${t.scenarioRunning}... ${message.completed_steps ?? 0}/${
                   message.total_steps ?? (message.total_algorithms ?? compatibleAlgorithms.length) * Math.max(1, repetitions)
                 } repetitions complete.`
               );
@@ -748,12 +846,12 @@ export const ScenarioTab = () => {
   return (
     <section className="space-y-4">
       <div className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h2 className="font-display text-lg text-ice">Scenario Simulator (Edge/Fog/Cloud)</h2>
+        <h2 className="font-display text-lg text-ice">{t.title}</h2>
         <p className="mt-1 text-xs text-slate">
-          Configure un environnement Edge/Fog/Cloud, choisis un preset, puis compare les plans de placement.
+          {t.body}
         </p>
         <p className="mt-1 text-[11px] text-slate">
-          Workflows loaded: {workflowSpecs.length} {workflowFamilies.length > 0 && `(${workflowFamilies.join(", ")})`}
+          {t.workflowsLoaded}: {workflowSpecs.length} {workflowFamilies.length > 0 && `(${workflowFamilies.join(", ")})`}
         </p>
         {workflowLoadError && <p className="mt-1 text-[11px] text-rose-300">{workflowLoadError}</p>}
 
@@ -764,9 +862,9 @@ export const ScenarioTab = () => {
               type="button"
               onClick={() => applyPreset(key)}
               className="rounded-md border border-stroke bg-ink px-3 py-2 text-xs text-ice hover:border-accent"
-              title={scenarioPresets[key].description}
+              title={t.presets[key][1]}
             >
-              {scenarioPresets[key].label}
+              {t.presets[key][0]}
             </button>
           ))}
         </div>
@@ -783,17 +881,17 @@ export const ScenarioTab = () => {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-center text-xs text-slate">Les fleches representent les transferts et la latence entre niveaux.</p>
+          <p className="mt-3 text-center text-xs text-slate">{t.transfers}</p>
         </div>
 
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-xs text-slate">
             <thead>
               <tr className="border-b border-stroke text-[10px] uppercase tracking-wide">
-                <th className="px-2 py-2">Niveau</th>
-                {envColumns.map((column) => (
-                  <th key={column.key} className="px-2 py-2" title={column.help}>
-                    {column.label} <span className="text-accent">?</span>
+                <th className="px-2 py-2">{t.level}</th>
+                {envColumnKeys.map((key) => (
+                  <th key={key} className="px-2 py-2" title={t.columns[key][1]}>
+                    {t.columns[key][0]} <span className="text-accent">?</span>
                   </th>
                 ))}
               </tr>
@@ -812,12 +910,12 @@ export const ScenarioTab = () => {
                       }
                     />
                   </td>
-                  {envColumns.map((column) => (
-                    <td key={column.key} className="px-2 py-2" title={column.help}>
+                  {envColumnKeys.map((key) => (
+                    <td key={key} className="px-2 py-2" title={t.columns[key][1]}>
                       <input
                         type="number"
-                        value={row.values[column.key]}
-                        onChange={(event) => updateEnv(index, column.key, Number(event.target.value))}
+                        value={row.values[key]}
+                        onChange={(event) => updateEnv(index, key, Number(event.target.value))}
                         className="w-20 rounded border border-stroke bg-ink px-1 py-1 text-ice"
                       />
                     </td>
@@ -830,13 +928,13 @@ export const ScenarioTab = () => {
 
         <div className="mt-3 grid gap-3 lg:grid-cols-[1.5fr_repeat(6,minmax(0,1fr))]">
           <label className="text-xs text-slate">
-            Workflow Preset
+            {t.workflowPreset}
             <select
               value={selectedWorkflowId}
               onChange={(event) => setSelectedWorkflowId(event.target.value)}
               className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-2 text-xs text-ice"
             >
-              <option value="">Manual synthetic tasks</option>
+              <option value="">{t.manualTasks}</option>
               {workflowSpecs.map((workflow) => (
                 <option key={workflow.workflow_id} value={workflow.workflow_id}>
                   {workflow.name} ({workflow.task_count} tasks)
@@ -846,7 +944,7 @@ export const ScenarioTab = () => {
           </label>
           {selectedWorkflowId ? (
             <label className="text-xs text-slate">
-              Workflow Task Limit
+              {t.workflowTaskLimit}
               <input
                 type="number"
                 min={1}
@@ -869,7 +967,7 @@ export const ScenarioTab = () => {
             </label>
           ) : (
             <label className="text-xs text-slate">
-              Tasks
+              {t.tasks}
               <input
                 type="number"
                 min={5}
@@ -901,10 +999,10 @@ export const ScenarioTab = () => {
             }
             className="h-fit rounded-md bg-ember px-3 py-2 text-xs font-semibold text-ink lg:self-end"
           >
-            Add Environment Tier
+            {t.addTier}
           </button>
           <label className="text-xs text-slate">
-            Population
+            {t.population}
             <input
               type="number"
               min={20}
@@ -915,7 +1013,7 @@ export const ScenarioTab = () => {
             />
           </label>
           <label className="text-xs text-slate">
-            Generations
+            {t.generations}
             <input
               type="number"
               min={5}
@@ -926,7 +1024,7 @@ export const ScenarioTab = () => {
             />
           </label>
           <label className="text-xs text-slate">
-            Repetitions
+            {t.repetitions}
             <input
               type="number"
               min={1}
@@ -937,7 +1035,7 @@ export const ScenarioTab = () => {
             />
           </label>
           <label className="text-xs text-slate">
-            Base Seed
+            {t.baseSeed}
             <input
               type="number"
               value={baseSeed}
@@ -953,7 +1051,7 @@ export const ScenarioTab = () => {
                 }
               }}
               className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-2 text-xs text-ice"
-              placeholder="optional"
+              placeholder={t.optional}
             />
           </label>
           <button
@@ -962,34 +1060,33 @@ export const ScenarioTab = () => {
             disabled={isLoading || algorithms.length === 0}
             className="h-fit rounded-md bg-accent px-3 py-2 text-xs font-semibold text-ink disabled:opacity-50 lg:self-end"
           >
-            {isLoading ? "Simulating..." : "Simulate Scheduling"}
+            {isLoading ? t.simulating : t.simulate}
           </button>
           <button
             type="button"
             onClick={() => resetSimulationRun()}
             className="h-fit rounded-md border border-stroke px-3 py-2 text-xs font-semibold text-slate lg:self-end"
           >
-            Reset Simulation Run
+            {t.resetRun}
           </button>
         </div>
         {selectedWorkflow && (
           <p className="mt-2 text-[11px] text-slate">
-            Selected workflow: {selectedWorkflow.family} | Tasks: {selectedWorkflow.task_count} | Edges:{" "}
-            {selectedWorkflow.edge_count} | Depth: {selectedWorkflow.max_depth}
+            {t.selectedWorkflow}: {selectedWorkflow.family} | {t.tasks}: {selectedWorkflow.task_count} | {t.edges}:{" "}
+            {selectedWorkflow.edge_count} | {t.depth}: {selectedWorkflow.max_depth}
           </p>
         )}
 
         <div className="mt-4 rounded-lg border border-stroke bg-ink/50 p-3">
-          <h4 className="font-display text-sm text-ice">Objectives (Manual)</h4>
+          <h4 className="font-display text-sm text-ice">{t.objectivesManual}</h4>
           <p className="mt-1 text-[11px] text-slate">
-            Configure at least 2 objectives (default: 4). Built-ins include latency, cost, energy, makespan, and execution speed.
-            You can also define expression-based objectives.
+            {t.objectivesHelp}
           </p>
           <div className="mt-3 space-y-2">
             {objectiveRows.map((row, idx) => (
               <div key={row.id} className="grid gap-2 rounded border border-stroke/60 p-2 md:grid-cols-6">
                 <label className="text-[11px] text-slate">
-                  Name
+                  {t.name}
                   <input
                     value={row.name}
                     onChange={(event) =>
@@ -1001,7 +1098,7 @@ export const ScenarioTab = () => {
                   />
                 </label>
                 <label className="text-[11px] text-slate">
-                  Key
+                  {t.key}
                   <select
                     value={row.key}
                     onChange={(event) =>
@@ -1021,7 +1118,7 @@ export const ScenarioTab = () => {
                     }
                     className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-1 text-xs text-ice"
                   >
-                    <option value="">Custom expression</option>
+                    <option value="">{t.customExpression}</option>
                     {objectiveCatalog.map((entry) => (
                       <option key={entry.key} value={entry.key}>
                         {entry.label}
@@ -1030,7 +1127,7 @@ export const ScenarioTab = () => {
                   </select>
                 </label>
                 <label className="text-[11px] text-slate">
-                  Direction
+                  {t.direction}
                   <select
                     value={row.direction}
                     onChange={(event) =>
@@ -1042,12 +1139,12 @@ export const ScenarioTab = () => {
                     }
                     className="mt-1 w-full rounded border border-stroke bg-ink px-2 py-1 text-xs text-ice"
                   >
-                    <option value="min">Minimize</option>
-                    <option value="max">Maximize</option>
+                    <option value="min">{t.minimize}</option>
+                    <option value="max">{t.maximize}</option>
                   </select>
                 </label>
                 <label className="text-[11px] text-slate">
-                  Target
+                  {t.target}
                   <input
                     type="number"
                     value={row.target}
@@ -1060,7 +1157,7 @@ export const ScenarioTab = () => {
                   />
                 </label>
                 <label className="text-[11px] text-slate md:col-span-2">
-                  Expression
+                  {t.expressionLabel}
                   <input
                     value={row.expression}
                     onChange={(event) =>
@@ -1079,7 +1176,7 @@ export const ScenarioTab = () => {
                     onClick={() => setObjectiveRows((prev) => prev.filter((_, j) => j !== idx))}
                     className="rounded border border-rose-400/50 px-2 py-1 text-[11px] text-rose-200 disabled:opacity-40"
                   >
-                    Remove
+                    {t.remove}
                   </button>
                 </div>
               </div>
@@ -1103,14 +1200,14 @@ export const ScenarioTab = () => {
               }
               className="rounded border border-stroke px-3 py-1 text-xs text-slate disabled:opacity-40"
             >
-              Add Objective
+              {t.addObjective}
             </button>
             <button
               type="button"
               onClick={() => setObjectiveRows(createDefaultObjectiveRows())}
               className="rounded border border-stroke px-3 py-1 text-xs text-slate"
             >
-              Reset
+              {t.resetObjectives}
             </button>
           </div>
         </div>

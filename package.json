@@ -7,7 +7,7 @@
   "author": "AST & RCT",
   "license": "UNLICENSED",
   "scripts": {
-    "local:backend": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000",
+    "local:backend": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --ws wsproto",
     "local:frontend": "npm --prefix frontend run dev -- --host 0.0.0.0 --port 5173",
     "local:dev": "node scripts/local_dev.js",
     "local:stop": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_local_dev.ps1",

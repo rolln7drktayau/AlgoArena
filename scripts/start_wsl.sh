@@ -41,7 +41,7 @@ trap cleanup EXIT INT TERM
 echo "Starting backend..."
 # shellcheck disable=SC1091
 source .venv/bin/activate
-uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 &
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --ws wsproto &
 BACKEND_PID=$!
 deactivate
 
@@ -59,4 +59,3 @@ echo ""
 echo "Press Ctrl+C to stop both."
 
 wait
-

@@ -51,8 +51,17 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
         params: "Parametres",
         advanced: "Parametres avances",
         duplicate: "Dupliquer cette configuration",
-        upload: "Custom Algorithm Upload",
-        register: "Enregistrer l'algorithme"
+        upload: "Algorithme personnalise",
+        register: "Enregistrer l'algorithme",
+        disable: "Desactiver",
+        enable: "Activer",
+        advancedOpen: "ouverts",
+        advancedClosed: "fermes",
+        pickFile: "Choisis un fichier Python qui implemente BaseAlgorithm.",
+        uploadFailed: "Upload echoue",
+        uploadOk: "Algorithme personnalise enregistre.",
+        className: "Nom de classe",
+        displayName: "Nom affiche"
       }
     : {
         title: "STEP 2 - Which algorithms?",
@@ -64,14 +73,23 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
         advanced: "Advanced settings",
         duplicate: "Duplicate this configuration",
         upload: "Custom Algorithm Upload",
-        register: "Register Algorithm"
+        register: "Register Algorithm",
+        disable: "Disable",
+        enable: "Enable",
+        advancedOpen: "open",
+        advancedClosed: "closed",
+        pickFile: "Pick a Python file implementing BaseAlgorithm.",
+        uploadFailed: "Upload failed",
+        uploadOk: "Custom algorithm registered.",
+        className: "Class name",
+        displayName: "Display name"
       };
 
   const enabledCount = visibleAlgorithms.filter((algorithm) => algorithm.enabled).length;
 
   const handleUploadAlgorithm = async () => {
     if (!uploadFile) {
-      setFeedback("Pick a Python file implementing BaseAlgorithm.");
+      setFeedback(text.pickFile);
       return;
     }
     const formData = new FormData();
@@ -81,10 +99,10 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
 
     const response = await fetch(buildApiUrl("/api/algorithms/upload"), { method: "POST", body: formData });
     if (!response.ok) {
-      setFeedback(`Upload failed: ${await response.text()}`);
+      setFeedback(`${text.uploadFailed}: ${await response.text()}`);
       return;
     }
-    setFeedback("Custom algorithm registered.");
+    setFeedback(text.uploadOk);
     setUploadFile(null);
     setUploadClassName("");
     setUploadDisplayName("");
@@ -149,7 +167,7 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
                 onClick={() => toggleAlgorithm(selectedAlgorithm.id)}
                 className="rounded border border-stroke px-3 py-2 text-xs text-slate"
               >
-                {selectedAlgorithm.enabled ? "Disable" : "Enable"}
+                {selectedAlgorithm.enabled ? text.disable : text.enable}
               </button>
               <button
                 type="button"
@@ -199,7 +217,7 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
               onClick={() => setShowAdvancedParams((value) => !value)}
               className="mt-3 rounded border border-stroke px-3 py-2 text-xs text-slate"
             >
-              {text.advanced} {showAdvancedParams ? "up" : "down"}
+              {text.advanced} {showAdvancedParams ? text.advancedOpen : text.advancedClosed}
             </button>
           )}
         </div>
@@ -209,8 +227,8 @@ export const AlgorithmConfigPanel = ({ specs, refreshAlgorithms }: Props) => {
         <div className="mt-4 rounded-xl border border-dashed border-stroke p-3">
           <h3 className="font-display text-sm text-ice">{text.upload}</h3>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-            <input type="text" placeholder="Class name" value={uploadClassName} onChange={(event) => setUploadClassName(event.target.value)} className="rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice" />
-            <input type="text" placeholder="Display name" value={uploadDisplayName} onChange={(event) => setUploadDisplayName(event.target.value)} className="rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice" />
+            <input type="text" placeholder={text.className} value={uploadClassName} onChange={(event) => setUploadClassName(event.target.value)} className="rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice" />
+            <input type="text" placeholder={text.displayName} value={uploadDisplayName} onChange={(event) => setUploadDisplayName(event.target.value)} className="rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice" />
             <input type="file" accept=".py" onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} className="rounded-md border border-stroke bg-ink px-2 py-1 text-xs text-ice file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-2 file:py-1 file:text-ink" />
           </div>
           <button type="button" onClick={handleUploadAlgorithm} className="mt-3 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-ink">

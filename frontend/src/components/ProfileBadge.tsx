@@ -4,11 +4,13 @@ import type { UserProfile } from "../types";
 
 const labels = {
   fr: {
+    prefix: "Profil",
     student: "Etudiant",
     researcher: "Chercheur",
     curious: "Curieux"
   },
   en: {
+    prefix: "Profile",
     student: "Student",
     researcher: "Researcher",
     curious: "Curious"
@@ -23,7 +25,7 @@ export const ProfileBadge = () => {
 
   return (
     <label className="flex items-center gap-1 rounded-lg border border-stroke bg-card px-2 py-1 text-xs text-slate">
-      <span aria-hidden="true">User</span>
+      <span aria-hidden="true">{t.prefix}</span>
       <select
         value={profile}
         onChange={(event) => setUserProfile(event.target.value as UserProfile)}

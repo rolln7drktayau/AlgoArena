@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { CartesianGrid, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 import type { GenerationSnapshot } from "../types";
+import { useAppStore } from "../store/useAppStore";
 
 interface Props {
   snapshot: GenerationSnapshot | null;
@@ -21,6 +22,7 @@ const projection = (point: number[], angle: number): { x: number; y: number } =>
 };
 
 export const ParetoChart = ({ snapshot, objectives }: Props) => {
+  const language = useAppStore((state) => state.language);
   const points2d = useMemo(
     () =>
       (snapshot?.population ?? []).map((member, index) => ({
@@ -82,7 +84,7 @@ export const ParetoChart = ({ snapshot, objectives }: Props) => {
   }, [objectives, snapshot]);
 
   if (!snapshot || snapshot.population.length === 0) {
-    return <div className="h-56 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">No population yet.</div>;
+    return <div className="h-56 rounded-lg border border-stroke bg-ink/60 p-3 text-xs text-slate">{language === "fr" ? "Aucune population pour le moment." : "No population yet."}</div>;
   }
 
   if (objectives >= 3) {
@@ -107,4 +109,3 @@ export const ParetoChart = ({ snapshot, objectives }: Props) => {
     </div>
   );
 };
-

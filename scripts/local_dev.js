@@ -3,6 +3,11 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const isWindows = process.platform === "win32";
+const localPython = isWindows
+  ? path.join(root, ".venv", "Scripts", "python.exe")
+  : path.join(root, ".venv", "bin", "python");
+const fs = require("fs");
+const pythonCommand = fs.existsSync(localPython) ? localPython : "python";
 
 const children = [];
 
@@ -68,5 +73,5 @@ console.log("Backend:  http://localhost:8000");
 console.log("Frontend: http://localhost:5173");
 console.log("Press Ctrl+C to stop both processes.\n");
 
-run("backend", "python", ["-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"], root);
+run("backend", pythonCommand, ["-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--ws", "wsproto"], root);
 run("frontend", "npm", ["--prefix", "frontend", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"], root);

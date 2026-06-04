@@ -17,6 +17,7 @@ import type {
   ScenarioRunSample,
   ScenarioStatSummary
 } from "../types";
+import { useAppStore } from "../store/useAppStore";
 
 interface Props {
   results: ScenarioResult[];
@@ -214,6 +215,30 @@ export const ScenarioVisualDashboard = ({
 }: Props) => {
   const [visibleCount, setVisibleCount] = useState(1);
   const [replaySpeed, setReplaySpeed] = useState(1);
+  const language = useAppStore((state) => state.language);
+  const t = language === "fr"
+    ? {
+        visualTitle: "Visualisations du scenario",
+        running: "Simulation",
+        repeats: "repetitions",
+        algorithms: "algorithmes",
+        dashboard: "Dashboard recherche",
+        steps: "Etapes",
+        pause: "Pause",
+        play: "Lire",
+        pareto: "Pareto (echantillonne en worker)"
+      }
+    : {
+        visualTitle: "Visual Scenario Insights",
+        running: "Running",
+        repeats: "repeats",
+        algorithms: "algorithms",
+        dashboard: "Research Dashboard",
+        steps: "Steps",
+        pause: "Pause",
+        play: "Play",
+        pareto: "Pareto (downsampled in worker)"
+      };
   const [autoPlay, setAutoPlay] = useState(true);
   const [xObjective, setXObjective] = useState("");
   const [yObjective, setYObjective] = useState("");
@@ -467,9 +492,9 @@ export const ScenarioVisualDashboard = ({
   if (results.length === 0 && isRunning) {
     return (
       <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
-        <h3 className="font-display text-base text-ice">Visual Scenario Insights</h3>
+        <h3 className="font-display text-base text-ice">{t.visualTitle}</h3>
         <p className="text-xs text-slate">
-          Running... {completedSteps}/{totalSteps || 0} repeats, {completedAlgorithms}/{totalAlgorithms || 0} algorithms.
+          {t.running}... {completedSteps}/{totalSteps || 0} {t.repeats}, {completedAlgorithms}/{totalAlgorithms || 0} {t.algorithms}.
         </p>
       </section>
     );
@@ -478,13 +503,13 @@ export const ScenarioVisualDashboard = ({
   return (
     <section className="rounded-2xl border border-stroke bg-card/70 p-4 shadow-glow">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-display text-base text-ice">Research Dashboard</h3>
+        <h3 className="font-display text-base text-ice">{t.dashboard}</h3>
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate">
           <span>
-            Steps {completedSteps}/{totalSteps || completedSteps} | Algorithms {completedAlgorithms}/{totalAlgorithms || completedAlgorithms}
+            {t.steps} {completedSteps}/{totalSteps || completedSteps} | {t.algorithms} {completedAlgorithms}/{totalAlgorithms || completedAlgorithms}
           </span>
           <button type="button" onClick={() => setAutoPlay((v) => !v)} className="rounded border border-stroke px-2 py-1">
-            {autoPlay ? "Pause" : "Play"}
+            {autoPlay ? t.pause : t.play}
           </button>
           <select value={replaySpeed} onChange={(e) => setReplaySpeed(Number(e.target.value))} className="rounded border border-stroke bg-card px-2 py-1 text-ice">
             <option value={0.5}>0.5x</option>
@@ -502,7 +527,7 @@ export const ScenarioVisualDashboard = ({
       <div className="grid gap-4 xl:grid-cols-2">
         <div ref={paretoRef} className="rounded-xl border border-stroke bg-ink/60 p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-slate">Pareto (downsampled in worker)</p>
+            <p className="text-xs text-slate">{t.pareto}</p>
             <div className="flex gap-2 text-[11px] text-slate">
               <select value={xObjective} onChange={(e) => setXObjective(e.target.value)} className="rounded border border-stroke bg-card px-2 py-1 text-ice">
                 {objectives.map((objective) => <option key={objective} value={objective}>{objective}</option>)}

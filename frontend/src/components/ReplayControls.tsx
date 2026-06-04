@@ -11,6 +11,10 @@ export const ReplayControls = ({ maxGeneration }: { maxGeneration: number }) => 
       setReplayPlaying: state.setReplayPlaying
     }))
   );
+  const language = useAppStore((state) => state.language);
+  const t = language === "fr"
+    ? { mode: "Mode Rejouer", pause: "Pause", play: "Lire", generation: "Generation" }
+    : { mode: "Replay mode", pause: "Pause", play: "Play", generation: "Generation" };
 
   useEffect(() => {
     if (!replay.enabled || !replay.playing || maxGeneration <= 0) {
@@ -37,7 +41,7 @@ export const ReplayControls = ({ maxGeneration }: { maxGeneration: number }) => 
             onChange={(event) => setReplayEnabled(event.target.checked)}
             className="h-4 w-4 accent-ember"
           />
-          Replay mode
+          {t.mode}
         </label>
         <button
           type="button"
@@ -45,10 +49,10 @@ export const ReplayControls = ({ maxGeneration }: { maxGeneration: number }) => 
           className="rounded-md bg-ember px-3 py-1 text-xs font-semibold text-ink disabled:opacity-50"
           onClick={() => setReplayPlaying(!replay.playing)}
         >
-          {replay.playing ? "Pause" : "Play"}
+          {replay.playing ? t.pause : t.play}
         </button>
         <span className="text-xs text-slate">
-          Generation {replay.index}/{maxGeneration}
+          {t.generation} {replay.index}/{maxGeneration}
         </span>
       </div>
       <input
