@@ -439,7 +439,7 @@ export default function Studio() {
           title={t("Ouvrir ou sauvegarder un projet")}
         >
           <span>{t("Projet")}</span> {state.lab?.title ?? t("Première expérience")}
-          <span>⌄</span>
+          <Icon name="file" />
         </button>
         <div className="studio-modes" aria-label={t("Niveau de détail")}>
           {(

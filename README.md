@@ -28,7 +28,7 @@ panel; smaller screens retain normal scrolling for readability.
 
 ### Application Windows : démarrer et arrêter
 
-Installez la version 3 avec `dist-electron/AlgoArena Desktop Setup 3.0.1.exe`,
+Installez la version 3 avec `dist-electron/AlgoArena Desktop Setup 3.0.2.exe`,
 puis ouvrez AlgoArena depuis son raccourci. Le lanceur propose **Application PC**
 (fenêtre dédiée) ou **Navigateur** (onglet local). Les calculs et les résultats
 sauvegardés sont les mêmes ; les réglages non sauvegardés restent propres à chaque fenêtre.

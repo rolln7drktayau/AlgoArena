@@ -1,0 +1,41 @@
+/* Shared by the web studio and Electron launcher. Keep native select behavior. */
+:root {
+  --select-chevron: url("./select-chevron-dark.svg");
+}
+body.theme-light {
+  --select-chevron: url("./select-chevron-light.svg");
+}
+
+/* Specificity keeps panel background/padding shorthands from hiding the arrow. */
+:root select:not([multiple]):is(:not([size]), [size="1"]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  padding-inline-end: 34px;
+  min-width: 64px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+:root select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+:root select:focus-visible {
+  outline: 2px solid #26a9dc;
+  outline-offset: 2px;
+}
+
+/* Windows high contrast supplies its own accessible native arrow. */
+@media (forced-colors: active) {
+  :root select:not([multiple]):is(:not([size]), [size="1"]) {
+    appearance: auto;
+    -webkit-appearance: auto;
+    background-image: none;
+    padding-inline-end: 8px;
+  }
+}
