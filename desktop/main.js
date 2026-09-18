@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, shell, ipcMain } = require("electron");
 const { spawn } = require("child_process");
 const crypto = require("crypto");
 const path = require("path");
@@ -408,14 +408,16 @@ function createWindow(appRoot, port, startupInfo = null) {
   win.loadURL(buildBackendUrl(port));
 }
 
-app.whenReady().then(async () => {
+async function launchStudio(target) {
   const appRoot = resolveAppRoot();
   const backendPort = resolveBackendPort();
 
-  if (await checkBackendHealth(backendPort)) {
-    createWindow(appRoot, backendPort, null);
+  if (backendProcess && await checkBackendHealth(backendPort)) {
+    if (target === "web") await shell.openExternal(buildBackendUrl(backendPort));
+    else createWindow(appRoot, backendPort);
     return;
   }
+  if (await checkBackendHealth(backendPort)) throw Error("Le port du moteur est déjà utilisé. Fermez l’autre instance d’AlgoArena.");
 
   let runtime;
   try {
@@ -452,13 +454,45 @@ app.whenReady().then(async () => {
     return;
   }
 
-  createWindow(appRoot, backendPort, {
+  if (target === "web") await shell.openExternal(buildBackendUrl(backendPort));
+  else createWindow(appRoot, backendPort, {
     title: "AlgoArena Desktop",
     message: "AlgoArena is ready.",
     localUrl: buildBackendUrl(backendPort),
     docsUrl: `${buildBackendUrl(backendPort)}/docs`,
     note: "Close this message to open the desktop window."
   });
+}
+
+let quitting = false;
+if (!app.requestSingleInstanceLock()) app.quit();
+app.on("second-instance", () => {
+  const launcher = BrowserWindow.getAllWindows().find(win => win.getTitle().includes("Démarrer"));
+  if (launcher) { launcher.restore(); launcher.show(); launcher.focus(); }
+});
+app.whenReady().then(() => {
+  const launcher = new BrowserWindow({
+    width: 780, height: 660, minWidth: 600, minHeight: 580,
+    show: process.env.ALGOARENA_HEADLESS !== "1",
+    title: "AlgoArena · Démarrer", autoHideMenuBar: true,
+    backgroundColor: "#0b1220", icon: path.join(__dirname, "assets", "icon.ico"),
+    webPreferences: { preload: path.join(__dirname, "launcher-preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  let launching = false;
+  ipcMain.handle("launcher:launch", async (event, target) => {
+    if (event.sender !== launcher.webContents || event.senderFrame !== launcher.webContents.mainFrame || !["web", "desktop"].includes(target)) throw Error("Action refusée");
+    if (launching) throw Error("Démarrage déjà en cours");
+    launching = true;
+    try { await launchStudio(target); return "Moteur actif. Gardez ce lanceur ouvert ; fermez-le pour tout arrêter."; }
+    finally { launching = false; }
+  });
+  ipcMain.handle("launcher:quit", (event) => {
+    if (event.sender === launcher.webContents && event.senderFrame === launcher.webContents.mainFrame) app.quit();
+  });
+  launcher.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  launcher.webContents.on("will-navigate", event => event.preventDefault());
+  launcher.loadFile(path.join(__dirname, "launcher.html"));
+  launcher.on("closed", () => app.quit());
 });
 
 app.on("window-all-closed", () => {
@@ -467,6 +501,10 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", async () => {
+app.on("before-quit", async (event) => {
+  if (quitting) return;
+  event.preventDefault();
+  quitting = true;
   await stopBackend();
+  app.quit();
 });

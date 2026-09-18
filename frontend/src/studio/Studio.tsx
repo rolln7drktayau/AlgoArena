@@ -17,6 +17,7 @@ import { useScenario } from "./useScenario";
 import { CampaignPanel, useCampaign } from "./Campaign";
 import type { ScenarioEnvironment, WorkflowSpec } from "../types";
 import "./studio.css";
+import { GuidedTour, ModeHelp } from "./GuidedTour";
 
 const ProblemPanel = lazy(() =>
   import("../components/ProblemConfigPanel").then((m) => ({
@@ -147,6 +148,8 @@ export default function Studio() {
   );
   const [view, setView] = useState<View>("pareto");
   const [mode, setMode] = useState<Mode>("explore");
+  const [modeHelp, setModeHelp] = useState(false);
+  const [tour, setTour] = useState(false);
   const [present, setPresent] = useState(false);
   const [inspector, setInspector] = useState(() => window.innerWidth > 1000);
   const [kind, setKind] = useState<"benchmark" | "scenario">("benchmark");
@@ -421,7 +424,7 @@ export default function Studio() {
             setView("pareto");
           }}
         >
-          <span className="brand-symbol">A</span>
+          <img className="brand-logo" src="/logo.png" alt="" />
           <strong>AlgoArena</strong>
         </a>
         <button
@@ -460,6 +463,7 @@ export default function Studio() {
             </button>
           ))}
         </div>
+        <button className="mode-help-button" aria-label="Comprendre les modes" onClick={() => setModeHelp(true)}>?</button>
         <button
           className="present-button"
           aria-pressed={present}
@@ -519,6 +523,7 @@ export default function Studio() {
           </div>
         ))}
         <div className="nav-bottom">
+          <button onClick={() => { setTour(true); setInspector(true); }}><span>▷ Tutoriel interactif</span></button>
           <button onClick={() => setView("help")}>
             ? <span>Comprendre</span>
           </button>
@@ -533,6 +538,7 @@ export default function Studio() {
         </div>
       </nav>
       <main className={`studio-main ${chartView ? "chart-view" : ""}`}>
+        <div className="mode-description"><strong>{mode === "learn" ? "Apprendre" : mode === "research" ? "Recherche" : "Explorer"}</strong><span>{mode === "learn" ? "Conseils et définitions pour découvrir les compromis." : mode === "research" ? "Extensions et vecteurs de décision pour approfondir l’analyse." : "Configurer, expérimenter et visualiser librement."}</span><button onClick={() => setModeHelp(true)}>Différences entre les modes</button></div>
         {notice && (
           <div role="alert" className="studio-alert">
             {notice}
@@ -1218,6 +1224,8 @@ export default function Studio() {
           </div>
         )}
       </aside>
+      {modeHelp && <ModeHelp close={() => setModeHelp(false)} />}
+      {tour && <GuidedTour navigate={setView} launch={start} ready={online} running={running} hasResults={solutions.length > 0} onClose={() => setTour(false)} />}
       <footer className="studio-status">
         <div className={`status-orbit ${running ? "spinning" : ""}`}>◔</div>
         <div className="status-label">

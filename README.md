@@ -26,6 +26,23 @@ panel; smaller screens retain normal scrolling for readability.
 
 ## Run locally
 
+### Application Windows : démarrer et arrêter
+
+Installez la version 3 avec `dist-electron/AlgoArena Desktop Setup 3.0.0.exe`,
+puis ouvrez AlgoArena depuis son raccourci. Le lanceur propose **Application PC**
+(fenêtre dédiée) ou **Navigateur** (onglet local). Les calculs et les résultats
+sauvegardés sont les mêmes ; les réglages non sauvegardés restent propres à chaque fenêtre.
+Le runtime Python est intégré : aucun terminal ni installation Python n’est nécessaire.
+Gardez le lanceur ouvert pendant le travail. **Tout arrêter et quitter**, ou fermer
+le lanceur, arrête le moteur et les calculs en cours. Fermer l’onglet seul ne suffit pas.
+
+Dans le studio, **Tutoriel interactif** accompagne une première expérience réelle.
+Le bouton **?** à côté des modes explique leurs différences : Apprendre ajoute des
+conseils, Explorer privilégie la manipulation, Recherche affiche les extensions et
+les vecteurs de décision. Changer de mode ne change pas les calculs.
+
+### Depuis les sources
+
 Requirements: Python 3.11+ and Node.js 22+ (validated locally on Python 3.13 / Node 24).
 
 ```powershell

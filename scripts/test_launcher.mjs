@@ -1,0 +1,46 @@
+import { _electron as electron, chromium } from "playwright";
+import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
+const env = { ...process.env, ALGOARENA_HEADLESS: "1" };
+delete env.ELECTRON_RUN_AS_NODE;
+const executablePath = process.env.ALGOARENA_TEST_EXE;
+const app = await electron.launch({ ...(executablePath ? { executablePath, args: [] } : { args: ["."] }), env });
+let browser;
+try {
+  const launcher = await app.firstWindow();
+  const studioOpened = app.waitForEvent("window");
+  await launcher.getByRole("button", { name: /Application PC/ }).click();
+  await launcher.getByRole("status").filter({ hasText: "Moteur actif" }).waitFor({ timeout: 90000 });
+  const studio = await studioOpened;
+  assert(studio, "desktop window missing");
+  await studio.getByRole("button", { name: "Comprendre les modes" }).click();
+  await studio.getByRole("dialog").waitFor();
+  await studio.getByRole("button", { name: "Compris", exact: true }).click();
+  await studio.getByRole("button", { name: /Tutoriel interactif/ }).click();
+  await studio.getByRole("button", { name: "Suivant →" }).click();
+  await studio.getByRole("button", { name: "Suivant →" }).click();
+  await studio.getByLabel("generations", { exact: true }).fill("4");
+  await studio.getByRole("button", { name: "Lancer l’expérience", exact: true }).click();
+  await studio.waitForFunction(() => document.querySelector(".status-label strong")?.textContent === "Résultats disponibles", null, { timeout: 60000 });
+  await studio.getByRole("button", { name: "Suivant →" }).click();
+  await studio.getByRole("button", { name: "Suivant →" }).click();
+  await studio.getByRole("button", { name: "Terminer", exact: true }).click();
+  await mkdir("reports", { recursive: true });
+  assert(await launcher.evaluate(() => document.documentElement.scrollHeight <= innerHeight), "launcher needs scrolling");
+  // Intercept OS browser invocation, then visit exactly that URL in an isolated browser.
+  await app.evaluate(({ shell }) => { globalThis.launchedUrl = null; shell.openExternal = async url => { globalThis.launchedUrl = url; }; });
+  await launcher.getByRole("button", { name: /Ouvrir le navigateur/ }).click();
+  await launcher.getByRole("status").filter({ hasText: "Moteur actif" }).waitFor();
+  const url = await app.evaluate(() => globalThis.launchedUrl);
+  assert.equal(url, "http://127.0.0.1:8765");
+  browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.goto(url);
+  await page.getByRole("button", { name: /Tutoriel interactif/ }).waitFor();
+  assert(await page.locator(".brand-logo").evaluate(img => img.complete && img.naturalWidth > 0));
+  const closed = app.waitForEvent("close");
+  await launcher.getByRole("button", { name: "Tout arrêter et quitter" }).click();
+  await closed;
+  await assert.rejects(fetch(`${url}/api/health`), "backend survives app quit");
+  console.log("PASS: desktop + browser launch, real bundled calculation, tour, modes, logo, engine shutdown");
+} finally { await browser?.close(); await app.close().catch(() => {}); }
