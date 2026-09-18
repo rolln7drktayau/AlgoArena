@@ -14,7 +14,7 @@ export const useProfileFilter = () => {
       isStudent,
       isResearcher,
       isCurious,
-      showAllAlgorithms: isResearcher,
+      showAllAlgorithms: true,
       showAdvancedMetrics: isResearcher,
       showAcademicExports: isResearcher,
       showStatTests: isResearcher,
@@ -25,7 +25,7 @@ export const useProfileFilter = () => {
       defaultTabIsExplore: isCurious,
       showSurpriseMeProminent: isCurious,
       showLabsFirst: !isCurious,
-      showCustomProblem: isResearcher,
+      showCustomProblem: true,
       showCustomAlgorithmUpload: isResearcher,
       showAdvancedHyperparams: isResearcher,
       allowedAlgorithms: isStudent

@@ -52,6 +52,7 @@ if MOPSOCDAlgorithm is not None:
     BUILTIN_ALGORITHMS["MOPSO-CD"] = MOPSOCDAlgorithm
 
 _CUSTOM_ALGORITHMS: dict[str, Type[BaseAlgorithm]] = {}
+_CUSTOM_RECIPES: dict[str, dict] = {}
 
 
 def register_custom_algorithm(name: str, algorithm_cls: Type[BaseAlgorithm]) -> None:
@@ -131,6 +132,7 @@ def load_custom_algorithm_from_file(
         selected_cls = classes[0]
 
     algo_name = display_name or getattr(selected_cls, "display_name", None) or selected_cls.__name__
+    _CUSTOM_RECIPES[algo_name] = {"file_path": file_path, "class_name": selected_cls.__name__, "display_name": algo_name}
     register_custom_algorithm(algo_name, selected_cls)
     return algo_name
 

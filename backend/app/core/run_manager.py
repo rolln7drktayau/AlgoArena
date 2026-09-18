@@ -17,13 +17,13 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from algorithms.base import PopulationSnapshot
+from algorithms.base import PopulationSnapshot, PopulationMember
+from . import storage
 from algorithms.registry import create_algorithm_instance
 from problems.registry import build_reference_front, create_problem
 
 from .metrics import build_diversity_heatmap, compute_metrics
 from .models import RunRequest
-from .statistics import kruskal_wallis, wilcoxon_signed_rank
 
 
 def _env_int(name: str) -> int | None:
@@ -80,11 +80,29 @@ class RunRecord:
 
 
 class RunManager:
-    def __init__(self) -> None:
+    def __init__(self, isolated: bool = False) -> None:
         self._runs: dict[str, RunRecord] = {}
+        self._isolated = isolated
 
     def get_run(self, run_id: str) -> RunRecord | None:
-        return self._runs.get(run_id)
+        if run_id in self._runs:
+            return self._runs[run_id]
+        raw = storage.load_record(run_id)
+        if not raw:
+            return None
+        records = {}
+        for key, value in raw["algorithms"].items():
+            snapshots = []
+            for item in value["snapshots"]:
+                item["population"] = [PopulationMember(**p) for p in item["population"]]
+                snapshots.append(PopulationSnapshot(**item))
+            value["snapshots"] = snapshots
+            records[key] = AlgorithmRunRecord(**value)
+        raw["algorithms"] = records
+        raw["started_at"] = datetime.fromisoformat(raw["started_at"])
+        if raw["finished_at"]:
+            raw["finished_at"] = datetime.fromisoformat(raw["finished_at"])
+        return RunRecord(**raw)
 
     async def execute_run(self, run_id: str, run_request: RunRequest, websocket: WebSocket) -> RunRecord:
         problem_config = run_request.problem.model_dump(exclude_none=True)
@@ -92,13 +110,16 @@ class RunManager:
         reference_front = build_reference_front(problem)
         hv_ref = None
         if reference_front is not None and len(reference_front) > 0:
-            hv_ref = np.max(reference_front, axis=0) * 1.15 + 1e-9
+            upper = np.max(reference_front, axis=0)
+            hv_ref = upper + np.maximum(np.abs(upper) * 0.15, 1e-9)
 
         run_record = RunRecord(
             run_id=run_id,
             problem_name=problem_config.get("name") or problem_config.get("problem_id") or run_request.problem.kind,
             started_at=datetime.now(tz=timezone.utc),
         )
+        if len(self._runs) >= 8:
+            self._runs.pop(next(iter(self._runs)))
         self._runs[run_id] = run_record
 
         algorithm_instances: dict[str, Any] = {}
@@ -115,6 +136,8 @@ class RunManager:
 
         for algo_cfg in selected_algorithms:
             safe_hyperparams = dict(algo_cfg.hyperparams or {})
+            if run_request.seed is not None:
+                safe_hyperparams.setdefault("seed", run_request.seed)
             _cap_hyperparam(safe_hyperparams, "population_size", max_population)
             _cap_hyperparam(safe_hyperparams, "generations", max_generations)
             algorithm = create_algorithm_instance(algo_cfg.name, problem, safe_hyperparams)
@@ -127,11 +150,13 @@ class RunManager:
 
         while active_algorithm_ids:
             progressed_this_cycle = False
-            for algorithm_id in list(active_algorithm_ids):
+            for algorithm_id in sorted(active_algorithm_ids):
                 algorithm = algorithm_instances[algorithm_id]
                 algo_record = run_record.algorithms[algorithm_id]
                 try:
-                    snapshot = await asyncio.wait_for(asyncio.to_thread(algorithm.step), timeout=step_timeout_sec)
+                    # In a worker, the parent owns timeout/termination. A thread timeout
+                    # would leave computation alive during executor shutdown.
+                    snapshot = algorithm.step() if self._isolated else await asyncio.wait_for(asyncio.to_thread(algorithm.step), timeout=step_timeout_sec)
                 except asyncio.TimeoutError:
                     algo_record.error = f"Algorithm step timed out after {step_timeout_sec:.1f}s."
                     active_algorithm_ids.remove(algorithm_id)
@@ -178,6 +203,8 @@ class RunManager:
                 snapshot.done = algorithm.is_done()
 
                 algo_record.snapshots.append(snapshot)
+                if len(algo_record.snapshots) > 200:
+                    del algo_record.snapshots[:-200]
                 if snapshot.done:
                     active_algorithm_ids.remove(algorithm_id)
 
@@ -348,7 +375,7 @@ class RunManager:
         return None
 
     def export_csv(self, run_id: str) -> str:
-        run_record = self._runs.get(run_id)
+        run_record = self.get_run(run_id)
         if run_record is None:
             raise KeyError(f"Run '{run_id}' not found")
 
@@ -401,7 +428,7 @@ class RunManager:
         return output.getvalue()
 
     def export_pdf(self, run_id: str) -> Path:
-        run_record = self._runs.get(run_id)
+        run_record = self.get_run(run_id)
         if run_record is None:
             raise KeyError(f"Run '{run_id}' not found")
 
@@ -460,13 +487,13 @@ class RunManager:
         elements.append(table)
         elements.append(Spacer(1, 16))
         if run_record.summary and run_record.summary.get("best_overall"):
-            elements.append(Paragraph(f"Best overall algorithm: {run_record.summary['best_overall']}", styles["Heading3"]))
+            elements.append(Paragraph(f"First under HV / IGD ordering: {run_record.summary['best_overall']}", styles["Heading3"]))
 
         doc.build(elements)
         return output_path
 
     def export_latex(self, run_id: str) -> str:
-        run_record = self._runs.get(run_id)
+        run_record = self.get_run(run_id)
         if run_record is None:
             raise KeyError(f"Run '{run_id}' not found")
 
@@ -508,15 +535,15 @@ class RunManager:
                 "  title = {AlgoArena: Interactive Optimization Algorithm Benchmarking},",
                 "  author = {AST and RCT},",
                 "  year = {2026},",
-                "  version = {2.0-development},",
+                "  version = {3.0.0},",
                 "  note = {Multi-objective optimization benchmarking, visualization, and scenario simulation platform},",
-                "  url = {https://github.com/}",
+                "  url = {https://github.com/rolln7drktayau/AlgoArena}",
                 "}",
             ]
         )
 
     def export_statistics(self, run_id: str, metric: str = "hv") -> dict[str, Any]:
-        run_record = self._runs.get(run_id)
+        run_record = self.get_run(run_id)
         if run_record is None:
             raise KeyError(f"Run '{run_id}' not found")
         groups: dict[str, list[float]] = {}
@@ -529,27 +556,16 @@ class RunManager:
             if values:
                 groups[algo.name] = values
 
-        pairwise = []
-        names = list(groups.keys())
-        for i, left in enumerate(names):
-            for right in names[i + 1 :]:
-                pairwise.append(
-                    {
-                        "left": left,
-                        "right": right,
-                        "result": wilcoxon_signed_rank(groups[left], groups[right]),
-                    }
-                )
         return {
             "run_id": run_id,
             "metric": metric,
             "sample_note": (
-                "Benchmark mode uses generation trajectories as samples. For publishable independent tests, "
-                "use scenario repetitions or repeated CLI runs with distinct seeds."
+                "Descriptive generation trajectories only: generations are correlated, not independent repetitions. "
+                "Inferential tests require independent runs and a validated experimental design."
             ),
             "groups": {name: {"n": len(values), "mean": float(np.mean(values)), "std": float(np.std(values))} for name, values in groups.items()},
-            "kruskal_wallis": kruskal_wallis(groups),
-            "pairwise_wilcoxon": pairwise,
+            "kruskal_wallis": {"available": False, "reason": "Independent repetitions required."},
+            "pairwise_wilcoxon": [],
         }
 
     def _fmt(self, value: Any) -> str:

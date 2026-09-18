@@ -109,6 +109,7 @@ export const useRunSocket = () => {
       );
     };
     ws.onmessage = (event) => {
+      if (wsRef.current !== thisSocket) return;
       try {
         const message = JSON.parse(event.data) as SocketMessage;
         queueRef.current.push(message);
@@ -123,6 +124,7 @@ export const useRunSocket = () => {
       if (wsRef.current !== thisSocket) {
         return;
       }
+      flushQueue();
       useAppStore.getState().setRunning(false);
       if (rafRef.current) {
         window.cancelAnimationFrame(rafRef.current);

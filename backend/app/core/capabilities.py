@@ -12,13 +12,15 @@ def get_runtime_capabilities() -> dict[str, object]:
         "runtime": "fastapi-local",
         "websocket": True,
         "pyodide": False,
+        "studio": {"version": 3, "persistent_journal": True, "process_cancellation": True,
+                   "campaigns": True, "campaign_resume": True, "dag_scheduling": True},
         "labs": {
             "indexeddb": False,
             "algoarena_file": True,
         },
         "custom_problem_modes": {
             "expression_ast": True,
-            "python_restricted": restricted_python_available,
+            "python_restricted": restricted_python_available and os.getenv("ALGOARENA_ENABLE_CUSTOM_PROBLEM_UPLOAD") == "1",
             "javascript_worker": False,
             "subprocess_json": subprocess_enabled,
         },
@@ -26,6 +28,7 @@ def get_runtime_capabilities() -> dict[str, object]:
             "python_restricted": False,
             "trusted_python_upload": custom_algorithm_upload_enabled,
             "thread_timeout": True,
+            "process_isolation": True,
         },
         "distribution": {
             "web_pyodide": False,

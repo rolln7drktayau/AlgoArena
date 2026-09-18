@@ -112,8 +112,8 @@ if (-not $SkipInstall) {
     }
 }
 
-$backendCmd = "Set-Location '$RootDir'; .\.venv\Scripts\Activate.ps1; uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --ws wsproto"
-$frontendCmd = "Set-Location '$RootDir\frontend'; npm run dev -- --host 0.0.0.0 --port 5173"
+$backendCmd = "Set-Location '$RootDir'; .\.venv\Scripts\Activate.ps1; uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --ws wsproto"
+$frontendCmd = "Set-Location '$RootDir\frontend'; npm run dev -- --host 127.0.0.1 --port 5173"
 
 if (-not (Test-PortListening -Port 8000)) {
     Write-Host "Starting backend in a new PowerShell window..."

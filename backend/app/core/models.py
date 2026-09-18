@@ -12,13 +12,23 @@ class AlgorithmConfig(BaseModel):
     label: str | None = None
     hyperparams: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("hyperparams")
+    @classmethod
+    def bounded_parameters(cls, params):
+        for key, upper in (("population_size", 1000), ("generations", 2000)):
+            if key in params and (isinstance(params[key], bool) or not isinstance(params[key], (int, float)) or not 1 <= params[key] <= upper or int(params[key]) != params[key]):
+                raise ValueError(f"{key} must be an integer between 1 and {upper}.")
+        if "seed" in params and (not isinstance(params["seed"], int) or not 0 <= params["seed"] <= 2**32 - 1):
+            raise ValueError("seed must be an unsigned 32-bit integer.")
+        return params
+
 
 class ProblemConfig(BaseModel):
     kind: Literal["builtin", "expression", "uploaded", "external"] = "builtin"
     name: str | None = None
     problem_id: str | None = None
-    n_var: int | None = None
-    n_obj: int | None = None
+    n_var: int | None = Field(default=None, ge=1, le=1000)
+    n_obj: int | None = Field(default=None, ge=2, le=15)
     xl: float | list[float] | None = None
     xu: float | list[float] | None = None
     objectives: list[str] | None = None
@@ -32,10 +42,17 @@ class ProblemConfig(BaseModel):
 
 
 class RunRequest(BaseModel):
-    run_id: str | None = None
-    seed: int | None = None
+    run_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{1,100}$")
+    seed: int | None = Field(default=None, ge=0, le=2**32 - 1)
     problem: ProblemConfig
-    algorithms: list[AlgorithmConfig]
+    algorithms: list[AlgorithmConfig] = Field(min_length=1, max_length=12)
+
+    @field_validator("algorithms")
+    @classmethod
+    def unique_algorithms(cls, algorithms):
+        if len({algorithm.id for algorithm in algorithms}) != len(algorithms):
+            raise ValueError("Algorithm IDs must be unique.")
+        return algorithms
 
 
 class CreateExpressionProblemRequest(BaseModel):
@@ -57,20 +74,21 @@ class CreateExternalProblemRequest(BaseModel):
 
 
 class EnvironmentTier(BaseModel):
-    devices: int
-    processing_rate: float
-    processing_cost: float
-    idle_power: float
-    working_power: float
-    uplink_bandwidth: float
-    downlink_bandwidth: float
+    devices: int = Field(ge=1, le=256)
+    processing_rate: float = Field(gt=0, allow_inf_nan=False)
+    processing_cost: float = Field(ge=0, allow_inf_nan=False)
+    idle_power: float = Field(ge=0, allow_inf_nan=False)
+    working_power: float = Field(ge=0, allow_inf_nan=False)
+    uplink_bandwidth: float = Field(gt=0, allow_inf_nan=False)
+    downlink_bandwidth: float = Field(gt=0, allow_inf_nan=False)
 
 
 class ScenarioTask(BaseModel):
     id: str
-    compute_demand: float
-    data_size: float
-    deadline: float | None = None
+    compute_demand: float = Field(ge=0, allow_inf_nan=False)
+    data_size: float = Field(ge=0, allow_inf_nan=False)
+    deadline: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    parents: list[str] = Field(default_factory=list)
 
 
 class ScenarioObjectiveSpec(BaseModel):
@@ -90,8 +108,8 @@ class ScenarioObjectiveSpec(BaseModel):
 
 
 class ScenarioRequest(BaseModel):
-    environments: dict[str, EnvironmentTier]
-    tasks: list[ScenarioTask] = Field(default_factory=list)
+    environments: dict[str, EnvironmentTier] = Field(min_length=1, max_length=16)
+    tasks: list[ScenarioTask] = Field(default_factory=list, max_length=1000)
     algorithms: list[str] = Field(
         default_factory=lambda: [
             "NSGA-II",
@@ -108,10 +126,10 @@ class ScenarioRequest(BaseModel):
             "Random Search",
         ]
     )
-    population_size: int = 80
-    generations: int = 50
+    population_size: int = Field(default=80, ge=5, le=1000)
+    generations: int = Field(default=50, ge=1, le=2000)
     repetitions: int = 1
-    base_seed: int | None = None
+    base_seed: int | None = Field(default=None, ge=0, le=2**31 - 1)
     objective_names: list[str] = Field(default_factory=lambda: ["Latency", "Cost", "Energy", "Makespan"])
     objective_targets: dict[str, float] | None = None
     objective_specs: list[ScenarioObjectiveSpec] | None = None

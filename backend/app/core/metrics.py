@@ -132,8 +132,9 @@ def compute_metrics(
 
     points = np.asarray(pop_objectives, dtype=float)
     hv_ref = hv_reference_point
-    if hv_ref is None:
-        hv_ref = np.max(points, axis=0) * 1.15 + 1e-9
+    if hv_ref is None and reference_front is not None and len(reference_front) > 0:
+        upper = np.max(reference_front, axis=0)
+        hv_ref = upper + np.maximum(np.abs(upper) * 0.15, 1e-9)
 
     hv_score: float | None = None
     igd_score: float | None = None
@@ -142,8 +143,9 @@ def compute_metrics(
     gd_plus_score: float | None = None
 
     try:
-        hv_indicator = HV(ref_point=hv_ref)
-        hv_score = _safe_float(hv_indicator(points))
+        if hv_ref is not None:
+            hv_indicator = HV(ref_point=hv_ref)
+            hv_score = _safe_float(hv_indicator(points))
     except Exception:
         hv_score = None
 

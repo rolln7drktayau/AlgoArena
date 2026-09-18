@@ -43,6 +43,7 @@ BUILTIN_PROBLEMS = [
 
 _CUSTOM_FACTORIES: dict[str, Callable[[], Problem]] = {}
 _CUSTOM_SPECS: dict[str, dict[str, Any]] = {}
+_RECIPES: dict[str, dict[str, Any]] = {}
 
 
 class ExpressionProblem(Problem):
@@ -181,6 +182,7 @@ def register_expression_problem(
     def _factory() -> Problem:
         return ExpressionProblem(objective_expressions=objectives, n_var=n_var, xl=xl, xu=xu)
 
+    _RECIPES[problem_id] = {key: value for key, value in locals().items() if key in {"name", "objectives", "n_var", "n_obj", "xl", "xu", "file_path", "function_name", "command", "timeout_sec"}}
     _CUSTOM_FACTORIES[problem_id] = _factory
     _CUSTOM_SPECS[problem_id] = {
         "problem_id": problem_id,
@@ -215,6 +217,7 @@ def register_uploaded_problem(
             xu=xu,
         )
 
+    _RECIPES[problem_id] = {key: value for key, value in locals().items() if key in {"name", "objectives", "n_var", "n_obj", "xl", "xu", "file_path", "function_name", "command", "timeout_sec"}}
     _CUSTOM_FACTORIES[problem_id] = _factory
     _CUSTOM_SPECS[problem_id] = {
         "problem_id": problem_id,
@@ -249,6 +252,7 @@ def register_external_problem(
             timeout_sec=timeout_sec,
         )
 
+    _RECIPES[problem_id] = {key: value for key, value in locals().items() if key in {"name", "objectives", "n_var", "n_obj", "xl", "xu", "file_path", "function_name", "command", "timeout_sec"}}
     _CUSTOM_FACTORIES[problem_id] = _factory
     _CUSTOM_SPECS[problem_id] = {
         "problem_id": problem_id,
@@ -281,3 +285,22 @@ def _normalize_bounds(value: float | list[float], n_var: int) -> np.ndarray:
 
 def _compile_expression(expression: str) -> Callable[[np.ndarray], float]:
     return compile_safe_expression(expression)
+
+
+def export_recipes() -> dict:
+    from algorithms.registry import _CUSTOM_RECIPES
+    return {"problems": _RECIPES, "algorithms": _CUSTOM_RECIPES}
+
+
+def restore_recipes(recipes: dict) -> None:
+    from algorithms.registry import load_custom_algorithm_from_file
+    for recipe in recipes.get("algorithms", {}).values():
+        load_custom_algorithm_from_file(**recipe)
+    for original_id, recipe in recipes.get("problems", {}).items():
+        if "objectives" in recipe:
+            new_id = register_expression_problem(**recipe)
+        elif "file_path" in recipe:
+            new_id = register_uploaded_problem(**recipe)
+        else:
+            new_id = register_external_problem(**recipe)
+        _CUSTOM_FACTORIES[original_id] = _CUSTOM_FACTORIES.pop(new_id)

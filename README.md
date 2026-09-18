@@ -1,307 +1,130 @@
 # AlgoArena
 
-<p align="left">
-  <img src="./frontend/public/logo.png" alt="AlgoArena logo" width="96" />
-</p>
-<p align="left">
-  <img src="./assets/branding/logo-wordmark.png" alt="AlgoArena wordmark" width="420" />
-</p>
+Local studio for multi-objective optimization and edge/fog/cloud scheduling.
+React + TypeScript frontend, FastAPI + pymoo backend, optional Electron desktop shell.
+Authors: AST & RCT.
 
-AlgoArena is a full-stack single-page application for benchmarking and visually comparing multi-objective optimization algorithms in real time.
+## Studio 3
 
-Authors: AST & RCT
+A shared experiment across **Apprendre / Explorer / Recherche**, with a presentation view.
+The desktop workspace follows [the visual reference](image.png): navigation, Pareto canvas,
+convergence, selected solution, inspector and execution status. Long forms scroll inside their
+panel; smaller screens retain normal scrolling for readability.
 
-## Stack
+- Real benchmark populations, selectable objectives and keyboard-accessible solution selection.
+- Scenario solution selection linked to placement and a decoded per-device Gantt.
+- Independent benchmark campaigns across problems, configurations and seeds, with actual
+  evaluation counts, descriptive summaries, Mann-Whitney tests and Holm correction.
+- Cancellable worker processes, bounded event queues, persistent SQLite manifests and events.
+- Campaign resume reuses completed samples under the exact original configuration.
+- Existing `.algoarena` projects retained, with optional Studio configuration metadata.
+- CSV, PDF, LaTeX, manifest and campaign JSON exports.
 
-- Frontend: React + Tailwind CSS + Zustand + D3.js + Recharts
-- Backend: FastAPI + pymoo + DEAP
-- Realtime transport: WebSocket (`/ws/run`)
-- Deployment: local development workflow (no Docker required)
+[Implementation and limitations (French)](docs/STUDIO_V3_FR.md) |
+[Initial audit and proposal](docs/AUDIT_ET_REFONTE_FR.md) |
+[Historical guides](docs/guides/GUIDE_COMPLET_FR.md)
 
-## Project Structure
+## Run locally
 
-```text
-.
-├── frontend/          # React SPA
-├── backend/           # FastAPI service
-├── algorithms/        # Pluggable algorithm modules (builtin + custom uploads)
-├── problems/          # Builtin/custom problem registry
-├── Workflows/         # Scientific workflow XML presets (Pegasus DAX)
-└── README.md
-```
+Requirements: Python 3.11+ and Node.js 22+ (validated locally on Python 3.13 / Node 24).
 
-## Features Implemented
-
-- Built-in algorithms: `NSGA-II`, `NSGA-III`, `U-NSGA-III`, `R-NSGA-II`, `R-NSGA-III`, `D-NSGA-II`, `MOEA/D`, `RVEA`, `C-TAEA`, `SPEA2`, `SMS-EMOA`, `Random Search`
-- Optional (if available in your installed `pymoo` build): `CMOPSO`, `MOPSO-CD`
-- Plug-in architecture with user upload for custom algorithm classes
-- Built-in benchmark problems: `ZDT1-6`, `DTLZ1-7`, `WFG1-9` (plus `WFG` alias)
-- Custom problems from objective expressions or uploaded Python evaluator
-- Per-algorithm hyperparameter panel with immediate-run restart behavior
-- Real-time side-by-side visualization:
-  - Pareto front (2D or projected 3D)
-  - Convergence curves (HV, IGD, IGD+, GD, GD+, Epsilon, Spread/Delta, Spacing, speed)
-  - Diversity heatmap
-  - Generation and elapsed time
-- Common researcher charts:
-  - Global Pareto chart (all algorithms together)
-  - Global convergence chart with selectable metric
-- Competition mode:
-  - Multiple algorithms on same problem
-  - Live leaderboard (HV, IGD, time-to-convergence, elapsed time)
-  - Final radar comparison chart
-  - Export to CSV and PDF report
-- UI/UX:
-  - Dark/Light theme toggle (dark default)
-  - Drag-and-drop panel reorder
-  - Pin/unpin metrics
-  - Replay mode generation-by-generation
-  - Responsive layout
-- Scenario simulation tab:
-  - Define Edge/Fog/Cloud-like environments
-  - Add/remove tiers
-  - Load scientific workflow presets from XML (Epigenomics, CyberShake, Montage, Inspiral, Sipht, plus other available DAX files)
-  - Optional workflow task-limit for large instances (e.g., 1000-task workflows)
-  - Manual objective builder (2 to 5 objectives): built-ins + optional expressions
-  - Built-in objectives include `latency`, `cost`, `energy`, `makespan`, `execution_speed`, and `avg_wait`
-  - Per-objective min/max direction and optional target values
-  - Simulate scheduling recommendations per algorithm
-  - Compare objective values, goal distance, speed, and assignments
-
-## Workflow API (Scenario Presets)
-
-- `GET /api/workflows` returns all detected Pegasus DAX workflows discovered recursively under `Workflows/**/*.xml`
-- `GET /api/workflows/{workflow_id}?limit=25` returns metadata and a normalized task preview
-- Scenario simulation accepts:
-  - `workflow_id` to use a workflow preset
-  - `workflow_task_limit` to run only the first N tasks in topological order
-
-If `workflow_id` is omitted, simulation uses manual/synthetic tasks.
-
-## Run Locally
-
-Detailed French tutorial:
-
-- [GUIDE_COMPLET_FR.md](./GUIDE_COMPLET_FR.md)
-
-### Backend
-
-```bash
-# from repository root
+```powershell
 python -m venv .venv
-# Windows PowerShell:
-# .venv\Scripts\activate
-# Linux/WSL:
-# source .venv/bin/activate
-pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+npm ci
+npm --prefix frontend ci
+npm --prefix frontend run build
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --ws wsproto
 ```
 
-### Frontend
-
-```bash
-# in a second terminal
-cd frontend
-npm install
-npm run dev
-```
-
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8000`
-- OpenAPI docs: `http://localhost:8000/docs`
-
-## Branches and Public Demo
-
-AlgoArena keeps two long-lived branches:
-
-- `release/v1.0`: frozen V1 baseline.
-- `develop/v2`: active V2 development and GitHub Pages demo source.
-
-The GitHub Pages demo is served from `docs/` on `develop/v2`. It is intentionally serverless: no Docker, no backend, no cloud database. The full app still runs locally with FastAPI, WebSockets and pymoo through `npm run local:dev`.
-
-## One-Command Startup Scripts
-
-### Windows (PowerShell)
+Open **http://127.0.0.1:8000**. On Linux/macOS, use `.venv/bin/python`.
+For frontend development, run `npm --prefix frontend run dev` alongside the backend.
+The Vite server proxies API and WebSocket requests to port 8000.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1
-```
-
-Optional:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -SkipInstall
-powershell -ExecutionPolicy Bypass -File .\scripts\start_windows.ps1 -NoToast
-```
-
-You can also use:
-
-```bat
-.\scripts\start_windows.bat
-```
-
-Windows launcher can show native toast notifications.
-It auto-opens the app URL in your default browser when services are ready.
-
-### Desktop Mode (Electron)
-
-Run a native desktop window (similar to Paige):
-
-```powershell
-npm install
 npm run desktop:dev
+# Windows installer (requires preparing the portable runtime for offline distribution):
+powershell -ExecutionPolicy Bypass -File scripts/build-desktop-full.ps1
 ```
 
-Build a Windows desktop installer (`dist-electron`):
+A bundled Python runtime is used directly, without installation at first launch.
+Without that bundle, the desktop bootstrap needs Python and network access.
+Cross-platform installers and completely offline first launch on clean machines still require
+release qualification; the code does not claim universal hardware support.
+
+## Scientific conventions
+
+The scenario engine is a deterministic, non-preemptive list scheduler with DAG precedence,
+per-device queues and one serialized ingress link per tier. Units: MI, MIPS, MB, Mbps,
+seconds, watts and joules. DAX runtime uses an explicit 1,000 MIPS reference machine;
+I/O is aggregated per task. It is not a packet-level network simulator or a validated
+replacement for every CloudSim Plus model.
+
+Hypervolume requires a common reference. Correlated generations are not independent
+statistical samples. Campaign inference includes only successful exact-budget runs and
+reports effect sizes and corrected p-values. At least five samples per group is a software
+minimum, not a guarantee of statistical power. Population plots draw at most approximately
+1,000 points and label dominance within the displayed sample; exports preserve full results.
+
+## Storage and limits
+
+- Engine journal: `~/.algoarena/runs.sqlite3`, configurable with `ALGOARENA_DATA_DIR`.
+- Two simultaneous worker processes by default (`ALGOARENA_MAX_JOBS`).
+- Inactivity timeout: 30 seconds for benchmarks, 300 for scenarios/campaigns (`ALGOARENA_WORKER_TIMEOUT_SEC`).
+- API limits: 12 benchmark configurations, 1,000 population members, 2,000 generations.
+- Benchmark summary exports retain the last 200 snapshots per algorithm; full events are paginated.
+- Campaign limit: five million requested evaluations.
+- SQLite main database capped near 1 GiB; WAL and exports need additional disk space.
+
+Workers stop when their WebSocket disconnects. Runs interrupted by a backend restart remain
+in the journal. Campaigns can resume from Projects; mid-generation checkpoint recovery is
+not implemented. The local CLI retains its direct execution path.
+
+## Local security
+
+Python uploads and external evaluators are disabled by default. Enable only trusted code:
+
+- `ALGOARENA_ENABLE_CUSTOM_PROBLEM_UPLOAD=1`
+- `ALGOARENA_ENABLE_CUSTOM_ALGORITHM_UPLOAD=1`
+- `ALGOARENA_ENABLE_SUBPROCESS=1`
+
+RestrictedPython and separate processes are not an operating-system sandbox.
+The default services bind to `127.0.0.1`. Additional browser origins must be explicitly listed
+in `ALGOARENA_ALLOWED_ORIGINS` (comma-separated). Origin checks do not replace authentication
+for a shared network deployment.
+
+## Verify
 
 ```powershell
-npm install
-npm run desktop:dist:win
+.\.venv\Scripts\python.exe -m pytest backend/tests -q
+npm --prefix frontend run test
+npm --prefix frontend run build
+# With the built frontend and backend running on port 8000:
+node scripts/test_studio.mjs
+npm audit
+npm --prefix frontend audit
 ```
 
-Paige-style packaging commands are also available:
+The browser test covers benchmark, modes, presentation, export, scenario-to-Gantt selection,
+campaigns and desktop/mobile layout. Captures are written to ignored `reports/`.
+CI tests backend and frontend on Windows and Linux.
+
+## API and CLI
+
+Interactive API reference: http://127.0.0.1:8000/docs
+
+- `/ws/run`, `/ws/scenario`, `/ws/campaign`: streamed execution.
+- `GET /api/runs`: persisted run manifests.
+- `GET /api/runs/{id}/manifest`: configuration, seed, versions and fingerprint.
+- `GET /api/runs/{id}/events?after=N`: ordered event replay (up to 100 per page).
+- `POST /api/scenario/decode`: decode the placement vector against its scenario.
+- `GET /api/runs/{id}/export/{csv|pdf|latex|statistics}`: benchmark exports.
 
 ```powershell
-npm run dist
-npm run dist:win
-npm run dist:linux
-npm run dist:mac
+.\.venv\Scripts\python.exe -m algoarena_cli algorithms
+.\.venv\Scripts\python.exe -m algoarena_cli run --problem ZDT1 --algorithm NSGA-II --seed 42 --generations 20
 ```
 
-A GitHub Actions workflow builds installers on Windows/Linux/macOS and uploads artifacts:
-
-- [build.yml](./.github/workflows/build.yml)
-
-### Branding Assets (Logo Pack)
-
-Branding sources and exports are stored in:
-
-- `assets/branding/logo-main.svg`
-- `assets/branding/logo-variant-b.svg`
-- `assets/branding/logo-monochrome.svg`
-- `assets/branding/logo-wordmark.svg`
-- `assets/branding/logo-variant-b.png`
-- `assets/branding/logo-wordmark.png`
-- `assets/branding/logo-monochrome.png`
-
-Desktop/taskbar icon (optimized for small sizes):
-
-- `desktop/assets/icon-taskbar.ico`
-
-To regenerate production icon files used by the app and installer:
-
-```powershell
-python scripts/generate_brand_assets.py
-```
-
-### Build Windows EXE Launcher
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build_launcher_exe.ps1
-```
-
-Then run:
-
-```powershell
-.\dist\AlgoArenaLauncher.exe
-```
-
-### WSL / Linux
-
-```bash
-chmod +x scripts/start_wsl.sh
-./scripts/start_wsl.sh
-```
-
-Optional:
-
-```bash
-./scripts/start_wsl.sh --skip-install
-```
-
-## WebSocket Protocol
-
-Endpoint: `ws://localhost:8000/ws/run`
-
-1. Client sends:
-
-```json
-{
-  "type": "start_run",
-  "payload": {
-    "problem": { "kind": "builtin", "name": "ZDT1", "n_var": 30, "n_obj": 2 },
-    "algorithms": [
-      {
-        "id": "nsga-ii",
-        "name": "NSGA-II",
-        "hyperparams": {
-          "population_size": 120,
-          "generations": 140,
-          "crossover_rate": 0.9,
-          "mutation_rate": 0.1
-        }
-      }
-    ]
-  }
-}
-```
-
-2. Server streams `run_started`, `generation`, `leaderboard`, and `completed` messages.
-
-## Custom Algorithm Plug-in Interface
-
-Place (or upload) a Python module containing a class inheriting `BaseAlgorithm`:
-
-```python
-from algorithms.base import BaseAlgorithm, PopulationSnapshot
-
-class MyAlgorithm(BaseAlgorithm):
-    display_name = "My Custom MOEA"
-    hyperparam_schema = {
-        "population_size": {"label": "Population Size", "type": "int", "min": 20, "max": 200, "step": 10, "default": 80},
-        "generations": {"label": "Generations", "type": "int", "min": 10, "max": 500, "step": 10, "default": 100}
-    }
-
-    def __init__(self, problem, hyperparams):
-        super().__init__(problem, hyperparams)
-        self._done = False
-
-    def step(self) -> PopulationSnapshot:
-        # Build and return one generation snapshot
-        raise NotImplementedError
-
-    def is_done(self) -> bool:
-        return self._done
-```
-
-Upload through UI or `POST /api/algorithms/upload` (multipart).
-An editable starter template is available at `algorithms/custom/_template_algorithm.py`.
-
-## Custom Problem Options
-
-1. Expression-based:
-   - `POST /api/problems/custom/expression`
-   - Each objective is an expression using `x`, `np`, and `math`
-2. Uploaded Python function:
-   - `POST /api/problems/custom/upload`
-   - Function signature example:
-
-```python
-def evaluate(x):
-    return [x[0]**2, (1 - x[0])**2]
-```
-
-## Tests
-
-Backend tests are under `backend/tests`:
-
-```bash
-python -m pytest backend/tests
-```
-
-Frontend robustness tests:
-
-```bash
-cd frontend
-npm run test
-```
+The standalone GitHub Pages demo in `docs/index.html` is a separate historical demonstration;
+it does not execute the local Studio backend. Only this README is kept as Markdown at the
+repository root. Historical instructions are under `docs/guides/`.

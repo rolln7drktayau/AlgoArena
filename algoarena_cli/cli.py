@@ -41,7 +41,7 @@ async def _run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 "mutation_rate": 0.1,
             },
         )
-        for name in args.algorithm
+        for name in (args.algorithm or ["NSGA-II"])
     ]
     request = RunRequest(
         problem=ProblemConfig(kind="builtin", name=args.problem, n_var=args.variables, n_obj=args.objectives),
@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = subparsers.add_parser("run", help="Run a local benchmark without starting the web UI")
     run.add_argument("--problem", default="ZDT1")
-    run.add_argument("--algorithm", action="append", default=["NSGA-II"], help="Algorithm name. Repeat for multiple competitors.")
+    run.add_argument("--algorithm", action="append", default=None, help="Algorithm name. Repeat for multiple competitors.")
     run.add_argument("--variables", type=int, default=30)
     run.add_argument("--objectives", type=int, default=2)
     run.add_argument("--population", type=int, default=60)

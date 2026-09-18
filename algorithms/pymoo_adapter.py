@@ -27,7 +27,8 @@ class PymooSteppingAlgorithm(BaseAlgorithm):
         self._start_time = perf_counter()
         self._done = False
         self._algorithm = self._build_algorithm()
-        self._algorithm.setup(self.problem, termination=("n_gen", self.max_generations), seed=self.seed, verbose=False)
+        termination = ("n_eval", int(self.hyperparams["max_evaluations"])) if self.hyperparams.get("max_evaluations") else ("n_gen", self.max_generations)
+        self._algorithm.setup(self.problem, termination=termination, seed=self.seed, verbose=False)
 
     def _build_algorithm(self) -> Any:
         raise NotImplementedError
@@ -63,7 +64,7 @@ class PymooSteppingAlgorithm(BaseAlgorithm):
         done = not self._algorithm.has_next()
         self._done = done
         return PopulationSnapshot(
-            generation=int(self._algorithm.n_gen),
+            generation=max(1, int(self._algorithm.n_gen) - 1),
             elapsed_sec=perf_counter() - self._start_time,
             population=self._extract_population(),
             done=done,
@@ -71,4 +72,3 @@ class PymooSteppingAlgorithm(BaseAlgorithm):
 
     def is_done(self) -> bool:
         return self._done or (not self._algorithm.has_next())
-

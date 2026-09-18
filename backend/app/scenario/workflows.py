@@ -73,19 +73,6 @@ def _build_workflow_id(family: str, size: int | None) -> str:
     return f"{_slugify(family)}-{size}"
 
 
-def _runtime_to_compute(runtime_norm: float, depth_norm: float) -> float:
-    return 180.0 + (1900.0 * min(1.0, runtime_norm)) + (400.0 * depth_norm)
-
-
-def _io_to_data_size(io_norm: float) -> float:
-    return 20.0 + (5200.0 * min(1.0, io_norm))
-
-
-def _estimate_deadline(runtime_norm: float, io_norm: float, depth_norm: float) -> float:
-    score = 0.55 * runtime_norm + 0.30 * io_norm + 0.15 * depth_norm
-    return 1.0 + (9.0 * min(1.0, score))
-
-
 def _parse_workflow(xml_path: Path) -> ParsedWorkflow:
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -120,11 +107,11 @@ def _parse_workflow(xml_path: Path) -> ParsedWorkflow:
     for child in root.findall(".//{*}child"):
         child_id = child.attrib.get("ref")
         if not child_id or child_id not in job_meta:
-            continue
+            raise ValueError("DAX contains an unknown child reference.")
         for parent in child.findall("{*}parent"):
             parent_id = parent.attrib.get("ref")
             if not parent_id or parent_id not in job_meta:
-                continue
+                raise ValueError("DAX contains an unknown parent reference.")
             parents_by_child[child_id].add(parent_id)
             children_by_parent[parent_id].add(child_id)
 
@@ -144,24 +131,13 @@ def _parse_workflow(xml_path: Path) -> ParsedWorkflow:
                 queue.append(child_id)
 
     if len(topo_order) < len(job_meta):
-        remaining = sorted(set(job_meta.keys()) - set(topo_order))
-        topo_order.extend(remaining)
+        raise ValueError("DAX contains a cycle.")
 
     max_depth = max(depth.values()) if depth else 0
-    runtime_values = np.array([meta["runtime"] for meta in job_meta.values()], dtype=float)
-    io_values = np.array([meta["io_kb"] for meta in job_meta.values()], dtype=float)
-    runtime_min, runtime_max = float(np.min(runtime_values)), float(np.max(runtime_values))
-    io_min, io_max = float(np.min(io_values)), float(np.max(io_values))
-    runtime_range = runtime_max - runtime_min if runtime_max > runtime_min else 1.0
-    io_range = io_max - io_min if io_max > io_min else 1.0
-    depth_den = float(max(1, max_depth))
 
     task_rows: list[WorkflowTaskData] = []
     for job_id in topo_order:
         meta = job_meta[job_id]
-        runtime_norm = (meta["runtime"] - runtime_min) / runtime_range
-        io_norm = (meta["io_kb"] - io_min) / io_range
-        depth_norm = depth[job_id] / depth_den
         task_rows.append(
             WorkflowTaskData(
                 job_id=job_id,
@@ -170,9 +146,10 @@ def _parse_workflow(xml_path: Path) -> ParsedWorkflow:
                 depth=depth[job_id],
                 task=ScenarioTask(
                     id=job_id,
-                    compute_demand=float(_runtime_to_compute(runtime_norm, depth_norm)),
-                    data_size=float(_io_to_data_size(io_norm)),
-                    deadline=float(_estimate_deadline(runtime_norm, io_norm, depth_norm)),
+                    compute_demand=float(meta["runtime"] * 1000.0),
+                    data_size=float(meta["io_kb"] / 1024.0),
+                    deadline=None,
+                    parents=sorted(parents_by_child[job_id]),
                 ),
             )
         )
@@ -292,6 +269,7 @@ def get_workflow_preview(workflow_id: str, limit: int = 25) -> dict[str, Any]:
         "edge_count": workflow.edge_count,
         "max_depth": workflow.max_depth,
         "source_file": workflow.source_file,
+        "conversion": "DAX runtime seconds at reference 1000 MIPS; I/O MB; precedence retained; aggregate per-task I/O",
         "tasks": task_preview,
     }
 
@@ -320,5 +298,6 @@ def load_workflow_tasks(workflow_id: str, limit: int | None = None) -> tuple[lis
         "edge_count": workflow.edge_count,
         "max_depth": workflow.max_depth,
         "source_file": workflow.source_file,
+        "conversion": "DAX runtime seconds at reference 1000 MIPS; I/O MB; precedence retained; aggregate per-task I/O",
     }
     return tasks, metadata

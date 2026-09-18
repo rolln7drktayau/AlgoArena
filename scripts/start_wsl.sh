@@ -41,14 +41,14 @@ trap cleanup EXIT INT TERM
 echo "Starting backend..."
 # shellcheck disable=SC1091
 source .venv/bin/activate
-uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --ws wsproto &
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --ws wsproto &
 BACKEND_PID=$!
 deactivate
 
 echo "Starting frontend..."
 (
   cd frontend
-  npm run dev -- --host 0.0.0.0 --port 5173
+  npm run dev -- --host 127.0.0.1 --port 5173
 ) &
 FRONTEND_PID=$!
 

@@ -1,12 +1,12 @@
 {
   "name": "algoarena-frontend",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 5173",
+    "preview": "vite preview --host 127.0.0.1 --port 5173",
     "test": "vitest run"
   },
   "dependencies": {
@@ -29,6 +29,6 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.11"
   }
 }

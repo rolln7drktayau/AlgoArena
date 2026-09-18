@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import heapq
 import math
 import os
 import random
@@ -14,6 +13,7 @@ from algorithms.registry import create_algorithm_instance
 from ..core.metrics import compute_metrics
 from ..core.models import EnvironmentTier, ScenarioRequest, ScenarioTask
 from .workflows import load_workflow_tasks
+from .scheduler import schedule, task_order
 
 
 def _env_int(name: str) -> int | None:
@@ -63,6 +63,7 @@ class SchedulingProblem(Problem):
         self.tiers = tiers
         self.tasks = tasks
         self.objectives = objectives
+        self.order = task_order(tasks)
         n_tiers = len(tiers)
         super().__init__(
             n_var=len(tasks),
@@ -92,61 +93,13 @@ class SchedulingProblem(Problem):
         return values
 
     def _evaluate_candidate_features(self, candidate: np.ndarray) -> dict[str, float]:
-        assignments = np.clip(np.rint(candidate).astype(int), 0, len(self.tiers) - 1)
-        latency = 0.0
-        cost = 0.0
-        energy = 0.0
-        total_wait = 0.0
-        makespan = 0.0
-        machine_queues: list[list[float]] = []
-        for tier in self.tiers:
-            devices = max(1, int(tier.devices))
-            queue = [0.0 for _ in range(devices)]
-            heapq.heapify(queue)
-            machine_queues.append(queue)
-
-        for task_index, tier_index in enumerate(assignments):
-            task = self.tasks[task_index]
-            tier = self.tiers[tier_index]
-
-            effective_rate = max(1e-6, tier.processing_rate * max(1, tier.devices))
-            compute_time = task.compute_demand / effective_rate
-            transfer_time = task.data_size / max(1e-6, tier.uplink_bandwidth)
-            service_time = compute_time + transfer_time
-            next_available = heapq.heappop(machine_queues[tier_index])
-            finish_time = next_available + service_time
-            heapq.heappush(machine_queues[tier_index], finish_time)
-
-            total_wait += next_available
-            task_latency = finish_time
-            if task.deadline is not None and task_latency > task.deadline:
-                task_latency += (task_latency - task.deadline) * 2.0
-
-            latency += task_latency
-            cost += task.compute_demand * tier.processing_cost
-            energy += (tier.idle_power * (next_available + 1e-6)) + (tier.working_power * service_time)
-            makespan = max(makespan, finish_time)
-
-        execution_speed = len(self.tasks) / max(1e-9, makespan)
-        avg_wait = total_wait / max(1, len(self.tasks))
-        return {
-            "latency": float(latency),
-            "cost": float(cost),
-            "energy": float(energy),
-            "makespan": float(makespan),
-            "execution_speed": float(execution_speed),
-            "avg_wait": float(avg_wait),
-        }
+        return schedule(self.tiers, self.tasks, candidate, self.order)[0]
 
     def evaluate_features(self, candidate: np.ndarray) -> dict[str, float]:
         return self._evaluate_candidate_features(candidate)
 
     def decode_schedule(self, candidate: np.ndarray) -> list[dict[str, Any]]:
-        assignments = np.clip(np.rint(candidate).astype(int), 0, len(self.tiers) - 1)
-        schedule: list[dict[str, Any]] = []
-        for task_index, tier_index in enumerate(assignments):
-            schedule.append({"task_id": self.tasks[task_index].id, "tier": self.tiers[tier_index].name})
-        return schedule
+        return schedule(self.tiers, self.tasks, candidate, self.order)[1]
 
 
 def _default_tasks(count: int = 20) -> list[ScenarioTask]:
@@ -351,6 +304,11 @@ def _run_algorithm(
         "elapsed_sec": last_snapshot.elapsed_sec,
         "population_objectives": population_objectives,
         "run_seed": seed,
+        "solutions": [{"id": f"{algorithm_name}:{seed}:{i}", "x": member.x,
+                       "objectives": _objective_value_map(objective_specs, np.asarray(member.f))}
+                      for i, member in enumerate(last_snapshot.population)],
+        "model": "dag-list-scheduler-v1",
+        "units": {"latency": "s", "energy": "J", "cost": "currency", "makespan": "s"},
     }
 
 
@@ -564,6 +522,8 @@ def _aggregate_algorithm_runs(
         ),
         "quality_metrics": metric_means if metric_means else representative["quality_metrics"],
         "schedule": representative["schedule"],
+        "solutions": [solution for output in outputs for solution in output.get("solutions", [])],
+        "model": "dag-list-scheduler-v1",
         "generation": int(round(generation_stats["mean"])),
         "elapsed_sec": float(elapsed_stats["mean"]),
         "repeat_count": len(outputs),

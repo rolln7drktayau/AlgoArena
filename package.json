@@ -1,14 +1,14 @@
 {
   "name": "algoarena-desktop",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
   "description": "AlgoArena desktop shell (Electron)",
   "main": "desktop/main.js",
   "author": "AST & RCT",
   "license": "UNLICENSED",
   "scripts": {
-    "local:backend": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --ws wsproto",
-    "local:frontend": "npm --prefix frontend run dev -- --host 0.0.0.0 --port 5173",
+    "local:backend": "python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --ws wsproto",
+    "local:frontend": "npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173",
     "local:dev": "node scripts/local_dev.js",
     "local:stop": "powershell -ExecutionPolicy Bypass -File .\\scripts\\stop_local_dev.ps1",
     "local:build": "npm --prefix frontend run build",
@@ -26,7 +26,7 @@
     "desktop:dist:win": "npm run dist:win"
   },
   "devDependencies": {
-    "electron": "^39.2.7",
+    "electron": "^42.11.5",
     "electron-builder": "^26.8.1",
     "playwright": "^1.60.0"
   },
@@ -48,7 +48,7 @@
       "scripts/**/*",
       "package.json",
       "QUICK_START_COMMANDS.txt",
-      "GUIDE_COMPLET_FR.md"
+      "docs/guides/GUIDE_COMPLET_FR.md"
     ],
     "extraMetadata": {
       "main": "desktop/main.js"

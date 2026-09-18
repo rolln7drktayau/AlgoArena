@@ -73,5 +73,5 @@ console.log("Backend:  http://localhost:8000");
 console.log("Frontend: http://localhost:5173");
 console.log("Press Ctrl+C to stop both processes.\n");
 
-run("backend", pythonCommand, ["-m", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--ws", "wsproto"], root);
-run("frontend", "npm", ["--prefix", "frontend", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"], root);
+run("backend", pythonCommand, ["-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", "8000", "--ws", "wsproto"], root);
+run("frontend", "npm", ["--prefix", "frontend", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"], root);

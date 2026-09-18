@@ -1,4 +1,5 @@
 import type { LabDocument } from "../types";
+import { validateLab } from "./validateLab";
 
 const DB_NAME = "algoarena-v2";
 const STORE_NAME = "labs";
@@ -52,9 +53,9 @@ const withStore = async <T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, mode);
     const request = fn(tx.objectStore(STORE_NAME));
-    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
-    tx.oncomplete = () => db.close();
+    tx.oncomplete = () => { db.close(); resolve(request.result); };
+    tx.onabort = () => { db.close(); reject(tx.error ?? new Error("Storage transaction aborted")); };
     tx.onerror = () => {
       db.close();
       reject(tx.error);
@@ -71,9 +72,9 @@ const withNamedStore = async <T>(
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, mode);
     const request = fn(tx.objectStore(storeName));
-    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
-    tx.oncomplete = () => db.close();
+    tx.oncomplete = () => { db.close(); resolve(request.result); };
+    tx.onabort = () => { db.close(); reject(tx.error ?? new Error("Storage transaction aborted")); };
     tx.onerror = () => {
       db.close();
       reject(tx.error);
@@ -99,7 +100,13 @@ export const listLabs = async (): Promise<LabDocument[]> => {
     return readFallbackLabs();
   }
   try {
-    return await withStore<LabDocument[]>("readonly", (store) => store.getAll() as IDBRequest<LabDocument[]>);
+    const indexed = await withStore<LabDocument[]>("readonly", (store) => store.getAll() as IDBRequest<LabDocument[]>);
+    const merged = new Map(indexed.map(lab => [lab.id, lab]));
+    for (const lab of readFallbackLabs()) {
+      const current = merged.get(lab.id);
+      if (!current || lab.updated_at > current.updated_at) merged.set(lab.id, lab);
+    }
+    return [...merged.values()];
   } catch {
     return readFallbackLabs();
   }
@@ -113,6 +120,7 @@ export const saveLab = async (lab: LabDocument): Promise<void> => {
   }
   try {
     await withStore<IDBValidKey>("readwrite", (store) => store.put(lab));
+    writeFallbackLabs(readFallbackLabs().filter(item => item.id !== lab.id));
   } catch {
     const labs = readFallbackLabs().filter((item) => item.id !== lab.id);
     writeFallbackLabs([...labs, lab]);
@@ -126,6 +134,7 @@ export const deleteLab = async (labId: string): Promise<void> => {
   }
   try {
     await withStore<undefined>("readwrite", (store) => store.delete(labId) as IDBRequest<undefined>);
+    writeFallbackLabs(readFallbackLabs().filter(item => item.id !== labId));
   } catch {
     writeFallbackLabs(readFallbackLabs().filter((item) => item.id !== labId));
   }
@@ -211,5 +220,5 @@ export const encodeLabForUrl = (lab: LabDocument): string => {
 
 export const decodeLabFromUrl = (encoded: string): LabDocument => {
   const json = decodeURIComponent(escape(atob(encoded)));
-  return JSON.parse(json) as LabDocument;
+  return validateLab(JSON.parse(json));
 };

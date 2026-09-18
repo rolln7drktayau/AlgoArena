@@ -24,6 +24,17 @@ describe("useAppStore realtime robustness", () => {
     useAppStore.setState(initialState, true);
   });
 
+  it("changes display profile without changing the experiment", () => {
+    const algorithms = [{ id: "nsga2", name: "NSGA-II", enabled: true, hyperparams: { population_size: 60 } },
+      { id: "random", name: "Random Search", enabled: false, hyperparams: { population_size: 20 } }];
+    useAppStore.setState({ algorithms });
+    const problem = useAppStore.getState().problemConfig;
+    useAppStore.getState().setUserProfile("researcher");
+    useAppStore.getState().setUserProfile("curious");
+    expect(useAppStore.getState().algorithms).toEqual(algorithms);
+    expect(useAppStore.getState().problemConfig).toBe(problem);
+  });
+
   it("deduplicates same-generation snapshot updates", () => {
     const first = makeMessage(5, 0.5);
     const second = makeMessage(5, 0.6);
@@ -55,4 +66,3 @@ describe("useAppStore realtime robustness", () => {
     expect(rows[rows.length - 1].generation).toBe(2300);
   });
 });
-

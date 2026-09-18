@@ -12,6 +12,7 @@ import {
 } from "../lib/labStorage";
 import { useAppStore } from "../store/useAppStore";
 import type { LabDocument, UserProfile } from "../types";
+import { validateLab } from "../lib/validateLab";
 
 const profileLabels: Record<UserProfile, string> = {
   student: "Etudiant",
@@ -126,7 +127,7 @@ export const LabsPanel = () => {
         } catch (error) {
           setFeedback(error instanceof Error ? error.message : "Lab saved locally, but file sync failed.");
         }
-      });
+      }).catch(error => setFeedback(error instanceof Error ? error.message : "Local save failed."));
     }, 400);
     return () => window.clearTimeout(timer);
   }, [currentLab]);
@@ -150,7 +151,8 @@ export const LabsPanel = () => {
       return;
     }
     try {
-      const parsed = JSON.parse(await file.text()) as LabDocument;
+      if (file.size > 20 * 1024 * 1024) throw new Error("Project exceeds 20 MiB.");
+      const parsed = validateLab(JSON.parse(await file.text()));
       setCurrentLab({ ...parsed, id: `${parsed.id}-imported-${Date.now().toString(36)}` });
       setFeedback(`Imported ${parsed.title}.`);
     } catch {

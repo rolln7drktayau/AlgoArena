@@ -25,6 +25,53 @@ from problems.registry import (
 
 router = APIRouter(prefix="/api", tags=["api"])
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+MAX_UPLOAD_BYTES = 1024 * 1024
+
+
+@router.get("/runs")
+def saved_runs() -> dict:
+    from ..core.storage import list_runs
+    return {"runs": list_runs()}
+
+
+@router.get("/runs/{run_id}/manifest")
+def run_manifest(run_id: str) -> dict:
+    from ..core.storage import get_manifest
+    try:
+        return get_manifest(run_id)
+    except KeyError as exc:
+        raise HTTPException(404, "Run not found") from exc
+
+
+@router.get("/runs/{run_id}/events")
+def run_events(run_id: str, after: int = 0) -> dict:
+    from ..core.storage import read_events
+    return {"events": read_events(run_id, after)}
+
+
+@router.post("/scenario/decode")
+def decode_solution(request: ScenarioRequest, x: list[float]) -> dict:
+    import numpy as np
+    from ..scenario.service import SchedulingProblem, _tier_data_from_request, _objective_specs_from_request
+    from ..scenario.workflows import load_workflow_tasks
+    try:
+        tasks = load_workflow_tasks(request.workflow_id, request.workflow_task_limit)[0] if request.workflow_id else request.tasks
+        problem = SchedulingProblem(_tier_data_from_request(request.environments), tasks, _objective_specs_from_request(request)[0])
+        return {"schedule": problem.decode_schedule(np.asarray(x)), "metrics": problem.evaluate_features(np.asarray(x))}
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+async def _save_python_upload(file: UploadFile, upload_dir: Path) -> Path:
+    if not file.filename or not file.filename.lower().endswith(".py"):
+        raise HTTPException(status_code=400, detail="Expected a .py file.")
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Python uploads are limited to 1 MiB.")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / f"{uuid4().hex}.py"
+    file_path.write_bytes(data)
+    return file_path
 
 
 @router.get("/health")
@@ -57,14 +104,12 @@ async def upload_algorithm(
             ),
         )
     upload_dir = PROJECT_ROOT / "algorithms" / "custom"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / f"{uuid4().hex}_{file.filename}"
-    data = await file.read()
-    file_path.write_bytes(data)
+    file_path = await _save_python_upload(file, upload_dir)
 
     try:
         registered_name = load_custom_algorithm_from_file(str(file_path), class_name=class_name, display_name=display_name)
     except Exception as exc:
+        file_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=f"Failed to load custom algorithm: {exc}") from exc
 
     return {"status": "registered", "algorithm_name": registered_name, "path": str(file_path)}
@@ -81,7 +126,7 @@ async def problem_domains() -> dict[str, list[dict[str, object]]]:
 
 
 @router.post("/problem-domains/simulate")
-async def simulate_problem_domain(request: DomainSimulationRequest) -> dict[str, object]:
+def simulate_problem_domain(request: DomainSimulationRequest) -> dict[str, object]:
     try:
         return simulate_domain(request)
     except Exception as exc:
@@ -113,10 +158,10 @@ async def upload_problem(
     xl: str = Form(default="0.0"),
     xu: str = Form(default="1.0"),
 ) -> dict[str, str]:
+    if os.getenv("ALGOARENA_ENABLE_CUSTOM_PROBLEM_UPLOAD") != "1":
+        raise HTTPException(status_code=403, detail="Python problem uploads require ALGOARENA_ENABLE_CUSTOM_PROBLEM_UPLOAD=1 in a trusted local environment.")
     upload_dir = PROJECT_ROOT / "problems" / "custom"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / f"{uuid4().hex}_{file.filename}"
-    file_path.write_bytes(await file.read())
+    file_path = await _save_python_upload(file, upload_dir)
 
     try:
         parsed_xl = _parse_bounds(xl)
@@ -131,6 +176,7 @@ async def upload_problem(
             xu=parsed_xu,
         )
     except Exception as exc:
+        file_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=f"Failed to register problem: {exc}") from exc
 
     return {"problem_id": problem_id, "name": name}
@@ -159,7 +205,7 @@ async def create_external_problem(request: CreateExternalProblemRequest) -> dict
 
 
 @router.post("/scenario/simulate")
-async def scenario_simulate(request: ScenarioRequest) -> dict[str, object]:
+def scenario_simulate(request: ScenarioRequest) -> dict[str, object]:
     try:
         return simulate_scenario(request)
     except Exception as exc:

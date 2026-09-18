@@ -158,7 +158,7 @@ const allowedAlgorithmsForProfile = (profile: UserProfile | null): string[] | nu
 const applyProfileAlgorithmVisibility = (algorithms: AlgorithmConfig[], profile: UserProfile | null): AlgorithmConfig[] => {
   const allowed = allowedAlgorithmsForProfile(profile);
   if (!allowed) {
-    return algorithms.map((algorithm) => ({ ...algorithm, enabled: true }));
+    return algorithms;
   }
   return algorithms.map((algorithm) => ({ ...algorithm, enabled: allowed.includes(algorithm.name) }));
 };
@@ -253,7 +253,7 @@ export const useAppStore = create<AppState>((set) => ({
   algorithmSpecs: [],
   algorithms: [],
   problems: [],
-  problemConfig: { kind: "builtin", name: "DTLZ2", n_var: 30, n_obj: 4, xl: 0, xu: 1 },
+  problemConfig: { kind: "builtin", name: "ZDT1", n_var: 12, n_obj: 2, xl: 0, xu: 1 },
   snapshotsByAlgorithm: {},
   algorithmNameById: {},
   leaderboard: [],
@@ -348,8 +348,7 @@ export const useAppStore = create<AppState>((set) => ({
     persistProfile(profile);
     set((state) => ({
       userProfile: profile,
-      tab: profile === "curious" ? "explore" : state.tab,
-      algorithms: applyProfileAlgorithmVisibility(state.algorithms, profile),
+
       currentLab: state.currentLab
         ? { ...state.currentLab, profile, updated_at: new Date().toISOString() }
         : state.currentLab
@@ -373,8 +372,8 @@ export const useAppStore = create<AppState>((set) => ({
         return {
           id: createAlgorithmId(spec.name),
           name: spec.name,
-          enabled: true,
-          hyperparams: defaultsFromSchema(spec.hyperparams)
+          enabled: spec.name === "NSGA-II",
+          hyperparams: { ...defaultsFromSchema(spec.hyperparams), population_size: 60, generations: 60 }
         };
       });
       const variants = state.algorithms.filter((algo) => specNames.has(algo.name) && algo.label);

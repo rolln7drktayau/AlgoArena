@@ -259,6 +259,12 @@ export interface LabRunRecord {
 
 export interface LabDocument {
   schema_version: 1;
+  studio?: {
+    seed: number;
+    kind: "benchmark" | "scenario";
+    scenario: { environments: Record<string, ScenarioEnvironment>; taskCount: number; workflowId: string;
+      population: number; generations: number; repetitions: number };
+  };
   id: string;
   title: string;
   profile: UserProfile;

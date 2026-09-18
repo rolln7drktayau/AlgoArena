@@ -163,6 +163,19 @@ function hashFileSha256(filePath) {
 async function ensureDesktopRuntime(appRoot) {
   const runtimeRoot = resolveRuntimeRoot();
   const bootstrapPython = resolvePythonBootstrapCommand(appRoot);
+  const bundledPythonRoot = path.join(appRoot, "desktop", "python");
+  if (bootstrapPython.startsWith(bundledPythonRoot + path.sep) || !app.isPackaged) {
+    try {
+      await runCommand(bootstrapPython,
+        ["-c", "import fastapi,uvicorn,numpy,pandas,pymoo,deap,reportlab,httpx,scipy"], { cwd: appRoot });
+      // Bundled dependencies are prepared at build time: no online install or venv at first launch.
+      return { runtimeRoot, runtimePython: bootstrapPython };
+    } catch (error) {
+      if (bootstrapPython.startsWith(bundledPythonRoot + path.sep)) {
+        throw new Error("Le runtime Python intégré est incomplet. Réinstallez une distribution complète d'AlgoArena.");
+      }
+    }
+  }
   const runtimePython = resolveRuntimeVenvPython(runtimeRoot);
   const requirementsPath = path.join(appRoot, "backend", "requirements.txt");
   const requirementsHash = hashFileSha256(requirementsPath);
@@ -324,10 +337,11 @@ function createWindow(appRoot, port, startupInfo = null) {
         : publicLogo;
 
   const win = new BrowserWindow({
+    show: process.env.ALGOARENA_HEADLESS !== "1",
     width: 1480,
     height: 900,
-    minWidth: 1120,
-    minHeight: 700,
+    minWidth: 700,
+    minHeight: 520,
     title: "AlgoArena Desktop",
     autoHideMenuBar: true,
     backgroundColor: "#0b1220",
@@ -372,9 +386,10 @@ function createWindow(appRoot, port, startupInfo = null) {
       win.webContents.downloadURL(url);
       return;
     }
-    if (url.startsWith(buildBackendUrl(port))) {
+    if (new URL(url).origin === buildBackendUrl(port)) {
       return;
     }
+    event.preventDefault();
     if (url.startsWith("http://") || url.startsWith("https://")) {
       event.preventDefault();
       void shell.openExternal(url);
@@ -396,6 +411,11 @@ function createWindow(appRoot, port, startupInfo = null) {
 app.whenReady().then(async () => {
   const appRoot = resolveAppRoot();
   const backendPort = resolveBackendPort();
+
+  if (await checkBackendHealth(backendPort)) {
+    createWindow(appRoot, backendPort, null);
+    return;
+  }
 
   let runtime;
   try {
