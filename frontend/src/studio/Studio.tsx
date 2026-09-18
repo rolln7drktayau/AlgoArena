@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAppStore, buildRunPayload } from "../store/useAppStore";
@@ -144,12 +145,17 @@ export default function Studio() {
       leaderboard: s.leaderboard,
       lab: s.currentLab,
       theme: s.theme,
+      language: s.language,
     })),
   );
   const [view, setView] = useState<View>("pareto");
   const [mode, setMode] = useState<Mode>("explore");
   const [modeHelp, setModeHelp] = useState(false);
   const [tour, setTour] = useState(false);
+  useEffect(() => {
+    document.documentElement.lang = state.language;
+    void window.algoarenaDesktop?.setLanguage?.(state.language).catch(() => {});
+  }, [state.language]);
   const [present, setPresent] = useState(false);
   const [inspector, setInspector] = useState(() => window.innerWidth > 1000);
   const [kind, setKind] = useState<"benchmark" | "scenario">("benchmark");
@@ -181,7 +187,7 @@ export default function Studio() {
         : scenario.runId;
   const refreshAlgorithms = async () => {
     const response = await fetch(buildApiUrl("/api/algorithms"));
-    if (!response.ok) throw Error("Moteur indisponible");
+    if (!response.ok) throw Error(t("Moteur indisponible"));
     useAppStore
       .getState()
       .setAlgorithmSpecs((await response.json()).algorithms);
@@ -202,7 +208,7 @@ export default function Studio() {
       .catch(() => {
         if (mounted)
           setError(
-            "Le moteur local ne répond pas. Vérifiez son démarrage, puis rechargez la page.",
+            t("Le moteur local ne répond pas. Vérifiez son démarrage, puis rechargez la page."),
           );
       });
     return () => {
@@ -258,7 +264,7 @@ export default function Studio() {
         problem: state.problem,
         algorithms: state.algorithms,
       }).catch(() =>
-        setError("La sauvegarde locale a échoué. Exportez votre projet."),
+        setError(t("La sauvegarde locale a échoué. Exportez votre projet.")),
       );
     }, 400);
     return () => clearTimeout(timer);
@@ -282,7 +288,7 @@ export default function Studio() {
           { length: state.problem.n_obj ?? 2 },
           (_, i) => `Objectif ${i + 1}`,
         );
-  const labels = runLabels ?? configuredLabels;
+  const labels = (runLabels ?? configuredLabels).map(label => label.startsWith("Objectif ") ? `${t("Objectif")} ${label.slice(8)}` : t(label));
   const solutions = useMemo(
     () =>
       kind === "scenario"
@@ -350,7 +356,7 @@ export default function Studio() {
     setSchedule([]);
     const payload = buildRunPayload();
     if (!payload.algorithms.length) {
-      setError("Sélectionnez au moins un algorithme.");
+      setError(t("Sélectionnez au moins un algorithme."));
       setView("algorithms");
       return;
     }
@@ -386,7 +392,7 @@ export default function Studio() {
         ),
       );
       if (!response.ok)
-        throw Error("L’export n’est pas disponible pour cette exécution.");
+        throw Error(t("L’export n’est pas disponible pour cette exécution."));
       download(
         await response.blob(),
         `algoarena-${id}.${format === "latex" ? "tex" : ["manifest", "statistics"].includes(format) ? "json" : format}`,
@@ -430,17 +436,17 @@ export default function Studio() {
         <button
           className="project-switch"
           onClick={() => setView("projects")}
-          title="Ouvrir ou sauvegarder un projet"
+          title={t("Ouvrir ou sauvegarder un projet")}
         >
-          <span>Projet</span> {state.lab?.title ?? "Première expérience"}
+          <span>{t("Projet")}</span> {state.lab?.title ?? t("Première expérience")}
           <span>⌄</span>
         </button>
-        <div className="studio-modes" aria-label="Niveau de détail">
+        <div className="studio-modes" aria-label={t("Niveau de détail")}>
           {(
             [
-              ["learn", "Apprendre"],
-              ["explore", "Explorer"],
-              ["research", "Recherche"],
+              ["learn", t("Apprendre")],
+              ["explore", t("Explorer")],
+              ["research", t("Recherche")],
             ] as [Mode, string][]
           ).map(([value, label]) => (
             <button
@@ -463,7 +469,7 @@ export default function Studio() {
             </button>
           ))}
         </div>
-        <button className="mode-help-button" aria-label="Comprendre les modes" onClick={() => setModeHelp(true)}>?</button>
+        <button className="mode-help-button" aria-label={t("Comprendre les modes")} onClick={() => setModeHelp(true)}>?</button>
         <button
           className="present-button"
           aria-pressed={present}
@@ -472,26 +478,28 @@ export default function Studio() {
             setView("pareto");
           }}
         >
-          {present ? "Quitter · Échap" : "Présenter"}
+          {present ? t("Quitter · Échap") : t("Présenter")}
         </button>
         <button
           className="run-button"
           onClick={start}
           disabled={running || !online}
         >
-          <Icon name="play" /> Lancer
-        </button>
+          <Icon name="play" />{t("Lancer")}</button>
         <div className="header-tools">
+          <select aria-label={t("Langue")} value={state.language} onChange={event => useAppStore.getState().setLanguage(event.target.value as "fr" | "en")}>
+            <option value="fr">FR</option><option value="en">EN</option>
+          </select>
           <button
-            title="Changer le thème"
-            aria-label="Changer le thème"
+            title={t("Changer le thème")}
+            aria-label={t("Changer le thème")}
             onClick={() => useAppStore.getState().toggleTheme()}
           >
             <Icon name="sun" />
           </button>
           <button
-            title="Afficher ou masquer l’inspecteur"
-            aria-label="Afficher ou masquer l’inspecteur"
+            title={t("Afficher ou masquer l’inspecteur")}
+            aria-label={t("Afficher ou masquer l’inspecteur")}
             aria-pressed={inspector}
             onClick={() => setInspector(!inspector)}
           >
@@ -501,15 +509,15 @@ export default function Studio() {
         <div className="connection">
           <i className={online ? "online" : "offline"} />
           <span>
-            {running ? "Calcul en cours" : online ? "Prêt" : "Hors connexion"}
-            <small>Local · Studio 3</small>
+            {running ? t("Calcul en cours") : online ? t("Prêt") : t("Hors connexion")}
+            <small>{t("Local · Studio 3")}</small>
           </span>
         </div>
       </header>
-      <nav className="studio-nav" aria-label="Navigation principale">
+      <nav className="studio-nav" aria-label={t("Navigation principale")}>
         {navigation.map((group) => (
           <div className="nav-group" key={group.group}>
-            <h2>{group.group}</h2>
+            <h2>{t(group.group)}</h2>
             {group.items.map(([id, label, icon]) => (
               <button
                 key={id}
@@ -517,33 +525,29 @@ export default function Studio() {
                 onClick={() => setView(id)}
               >
                 <Icon name={icon} />
-                <span>{label}</span>
+                <span>{t(label)}</span>
               </button>
             ))}
           </div>
         ))}
         <div className="nav-bottom">
-          <button onClick={() => { setTour(true); setInspector(true); }}><span>▷ Tutoriel interactif</span></button>
+          <button onClick={() => { setTour(true); setInspector(true); }}><span>{t("▷ Tutoriel interactif")}</span></button>
           <button onClick={() => setView("help")}>
-            ? <span>Comprendre</span>
+            ? <span>{t("Comprendre")}</span>
           </button>
           <button onClick={() => setView("explore")}>
-            ◌ <span>Bac à sable</span>
+            ◌ <span>{t("Bac à sable")}</span>
           </button>
-          <p>
-            Comprendre.
-            <br />
-            Expérimenter. Reproduire.
-          </p>
+          <p>{t("Comprendre.")}<br />{t("Expérimenter. Reproduire.")}</p>
         </div>
       </nav>
       <main className={`studio-main ${chartView ? "chart-view" : ""}`}>
-        <div className="mode-description"><strong>{mode === "learn" ? "Apprendre" : mode === "research" ? "Recherche" : "Explorer"}</strong><span>{mode === "learn" ? "Conseils et définitions pour découvrir les compromis." : mode === "research" ? "Extensions et vecteurs de décision pour approfondir l’analyse." : "Configurer, expérimenter et visualiser librement."}</span><button onClick={() => setModeHelp(true)}>Différences entre les modes</button></div>
+        <div className="mode-description"><strong>{mode === "learn" ? t("Apprendre") : mode === "research" ? t("Recherche") : t("Explorer")}</strong><span>{mode === "learn" ? t("Conseils et définitions pour découvrir les compromis.") : mode === "research" ? t("Extensions et vecteurs de décision pour approfondir l’analyse.") : t("Configurer, expérimenter et visualiser librement.")}</span><button onClick={() => setModeHelp(true)}>{t("Différences entre les modes")}</button></div>
         {notice && (
           <div role="alert" className="studio-alert">
             {notice}
             <button
-              aria-label="Fermer le message"
+              aria-label={t("Fermer le message")}
               onClick={() => {
                 setError(null);
                 useAppStore.getState().setSocketError(null);
@@ -555,14 +559,11 @@ export default function Studio() {
         )}
         {mode === "learn" && (
           <div className="learn-hint">
-            <strong>Votre expérience, en quatre étapes.</strong> Préparez un
-            problème, lancez un algorithme, sélectionnez un compromis, puis
-            conservez ses résultats. Changer de niveau ne modifie pas le calcul.
-          </div>
+            <strong>{t("Votre expérience, en quatre étapes.")}</strong>{t("Préparez un problème, lancez un algorithme, sélectionnez un compromis, puis conservez ses résultats. Changer de niveau ne modifie pas le calcul.")}</div>
         )}
-        <ErrorBoundary title="Espace de travail">
+        <ErrorBoundary title={t("Espace de travail")}>
           <Suspense
-            fallback={<div className="studio-empty">Chargement de la vue…</div>}
+            fallback={<div className="studio-empty">{t("Chargement de la vue…")}</div>}
           >
             {chartView && (
               <>
@@ -572,14 +573,14 @@ export default function Studio() {
                       {view === "metrics"
                         ? "CONVERGENCE"
                         : view === "arena"
-                          ? "ARENA · FRONT EN DIRECT"
-                          : "FRONT DE PARETO"}
+                          ? t("ARENA · FRONT EN DIRECT")
+                          : t("FRONT DE PARETO")}
                     </h1>
                     <div className="axis-controls">
                       <label>
                         X{" "}
                         <select
-                          aria-label="Objectif horizontal"
+                          aria-label={t("Objectif horizontal")}
                           value={xAxis}
                           onChange={(e) => setXAxis(+e.target.value)}
                         >
@@ -593,7 +594,7 @@ export default function Studio() {
                       <label>
                         Y{" "}
                         <select
-                          aria-label="Objectif vertical"
+                          aria-label={t("Objectif vertical")}
                           value={yAxis}
                           onChange={(e) => setYAxis(+e.target.value)}
                         >
@@ -612,14 +613,10 @@ export default function Studio() {
                       Population
                     </span>
                     <span>
-                      <i className="cyan" />
-                      Non dominée · vue
-                    </span>
+                      <i className="cyan" />{t("Non dominée · vue")}</span>
                     <span>
                       {solutions.length} solutions
-                      {solutions.length > 1000 ? " · vue échantillonnée" : ""} ·
-                      minimisation
-                    </span>
+                      {solutions.length > 1000 ? t(" · vue échantillonnée") : ""}{t("· minimisation")}</span>
                   </div>
                   {view === "metrics" && kind === "benchmark" ? (
                     <Convergence series={series} label={metric} />
@@ -639,12 +636,12 @@ export default function Studio() {
                     <div className="card-heading">
                       <h2>
                         {kind === "scenario"
-                          ? "Placement · trace d’exécution"
+                          ? t("Placement · trace d’exécution")
                           : "Convergence"}
                       </h2>
                       {kind === "benchmark" && (
                         <select
-                          aria-label="Métrique de convergence"
+                          aria-label={t("Métrique de convergence")}
                           value={metric}
                           onChange={(e) => setMetric(e.target.value)}
                         >
@@ -659,10 +656,7 @@ export default function Studio() {
                       schedule.length ? (
                         <Gantt rows={schedule} />
                       ) : (
-                        <div className="small-empty">
-                          Sélectionnez un point pour examiner son
-                          ordonnancement.
-                        </div>
+                        <div className="small-empty">{t("Sélectionnez un point pour examiner son ordonnancement.")}</div>
                       )
                     ) : (
                       <Convergence series={series} label={metric} />
@@ -670,7 +664,7 @@ export default function Studio() {
                   </section>
                   <section className="studio-card selection-card">
                     <div className="card-heading">
-                      <h2>Solution sélectionnée</h2>
+                      <h2>{t("Solution sélectionnée")}</h2>
                       <span className="pill">
                         {selected ? `G${selected.generation}` : "—"}
                       </span>
@@ -680,7 +674,7 @@ export default function Studio() {
                         <div className="solution-metrics">
                           {selected.f.map((value, i) => (
                             <div key={i}>
-                              <span>{labels[i] ?? `Objectif ${i + 1}`}</span>
+                              <span>{labels[i] ?? `${t("Objectif")} ${i + 1}`}</span>
                               <strong>{number(value)}</strong>
                             </div>
                           ))}
@@ -689,15 +683,13 @@ export default function Studio() {
                           <span>{selected.algorithm}</span>
                           <small>
                             {selection
-                              ? "Sélection conservée"
-                              : "Première solution de la population"}
+                              ? t("Sélection conservée")
+                              : t("Première solution de la population")}
                           </small>
                         </div>
                       </>
                     ) : (
-                      <div className="small-empty">
-                        Les objectifs et la provenance apparaîtront ici.
-                      </div>
+                      <div className="small-empty">{t("Les objectifs et la provenance apparaîtront ici.")}</div>
                     )}
                   </section>
                 </div>
@@ -708,10 +700,10 @@ export default function Studio() {
                 <div className="card-heading">
                   <h1>
                     {view === "objectives"
-                      ? "OBJECTIFS ET HYPOTHÈSES"
-                      : "PRÉPARER L’EXPÉRIENCE"}
+                      ? t("OBJECTIFS ET HYPOTHÈSES")
+                      : t("PRÉPARER L’EXPÉRIENCE")}
                   </h1>
-                  <span className="pill">Configuration explicite</span>
+                  <span className="pill">{t("Configuration explicite")}</span>
                 </div>
                 <div className="choice-row">
                   <button
@@ -720,8 +712,8 @@ export default function Studio() {
                     onClick={() => changeKind("benchmark")}
                   >
                     <Icon name="chart" />
-                    <strong>Benchmark mathématique</strong>
-                    <small>Comparer sur ZDT, DTLZ ou vos expressions</small>
+                    <strong>{t("Benchmark mathématique")}</strong>
+                    <small>{t("Comparer sur ZDT, DTLZ ou vos expressions")}</small>
                   </button>
                   <button
                     className={kind === "scenario" ? "active" : ""}
@@ -729,23 +721,17 @@ export default function Studio() {
                     onClick={() => changeKind("scenario")}
                   >
                     <Icon name="nodes" />
-                    <strong>Simulation edge / fog / cloud</strong>
-                    <small>
-                      Placer les tâches d’un workflow et lire sa trace
-                    </small>
+                    <strong>{t("Simulation edge / fog / cloud")}</strong>
+                    <small>{t("Placer les tâches d’un workflow et lire sa trace")}</small>
                   </button>
                 </div>
                 {kind === "benchmark" ? (
                   <fieldset disabled={running} className="embedded-panel">
-                    <ProblemPanel problems={state.problems} />
+                    <ProblemPanel problems={state.problems} onOpenScenario={() => { changeKind("scenario"); setView("workflow"); }} />
                   </fieldset>
                 ) : (
                   <>
-                    <p className="subtle">
-                      Modèle non préemptif : dépendances conservées, une liaison
-                      entrante partagée par tier, vitesse par appareil. Latence
-                      cumulée en secondes, énergie en joules, coût par MI.
-                    </p>
+                    <p className="subtle">{t("Modèle non préemptif : dépendances conservées, une liaison entrante partagée par tier, vitesse par appareil. Latence cumulée en secondes, énergie en joules, coût par MI.")}</p>
                     <div className="environment-grid">
                       {Object.entries(scenario.config.environments).map(
                         ([name, env]) => (
@@ -759,18 +745,18 @@ export default function Studio() {
                             </legend>
                             {(
                               [
-                                ["devices", "Appareils"],
+                                ["devices", t("Appareils")],
                                 [
                                   "processing_rate",
-                                  "Vitesse / appareil (MIPS)",
+                                  t("Vitesse / appareil (MIPS)"),
                                 ],
-                                ["processing_cost", "Coût / MI"],
-                                ["idle_power", "Puissance au repos (W)"],
-                                ["working_power", "Puissance en calcul (W)"],
-                                ["uplink_bandwidth", "Liaison entrante (Mbps)"],
+                                ["processing_cost", t("Coût / MI")],
+                                ["idle_power", t("Puissance au repos (W)")],
+                                ["working_power", t("Puissance en calcul (W)")],
+                                ["uplink_bandwidth", t("Liaison entrante (Mbps)")],
                                 [
                                   "downlink_bandwidth",
-                                  "Liaison sortante (Mbps)",
+                                  t("Liaison sortante (Mbps)"),
                                 ],
                               ] as [keyof ScenarioEnvironment, string][]
                             ).map(([key, label]) => (
@@ -801,11 +787,8 @@ export default function Studio() {
             )}
             {view === "workflow" && (
               <section className="studio-card form-card">
-                <h1>WORKFLOW ET DÉPENDANCES</h1>
-                <p className="subtle">
-                  Le moteur attend la fin des parents et les transferts avant de
-                  démarrer une tâche.
-                </p>
+                <h1>{t("WORKFLOW ET DÉPENDANCES")}</h1>
+                <p className="subtle">{t("Le moteur attend la fin des parents et les transferts avant de démarrer une tâche.")}</p>
                 <label className="field">
                   Source
                   <select
@@ -819,7 +802,7 @@ export default function Studio() {
                       }));
                     }}
                   >
-                    <option value="">Exercice synthétique déterministe</option>
+                    <option value="">{t("Exercice synthétique déterministe")}</option>
                     {workflows.map((w) => (
                       <option key={w.workflow_id} value={w.workflow_id}>
                         {w.name}
@@ -827,9 +810,7 @@ export default function Studio() {
                     ))}
                   </select>
                 </label>
-                <label className="field">
-                  Nombre de tâches / limite
-                  <input
+                <label className="field">{t("Nombre de tâches / limite")}<input
                     disabled={running}
                     type="number"
                     min="2"
@@ -843,11 +824,7 @@ export default function Studio() {
                     }
                   />
                 </label>
-                <p className="info-box">
-                  DAX : runtime converti avec une machine de référence à 1 000
-                  MIPS. Volumes agrégés par tâche ; la simulation ne modélise
-                  pas les paquets réseau.
-                </p>
+                <p className="info-box">{t("DAX : runtime converti avec une machine de référence à 1 000 MIPS. Volumes agrégés par tâche ; la simulation ne modélise pas les paquets réseau.")}</p>
                 <button
                   className="primary"
                   disabled={running}
@@ -855,19 +832,14 @@ export default function Studio() {
                     changeKind("scenario");
                     setView("scenario");
                   }}
-                >
-                  Configurer les ressources
-                </button>
+                >{t("Configurer les ressources")}</button>
                 {schedule.length > 0 && <Gantt rows={schedule} />}
               </section>
             )}
             {view === "algorithms" && (
               <section className="studio-card form-card">
-                <h1>BIBLIOTHÈQUE D’ALGORITHMES</h1>
-                <p className="subtle">
-                  Activez les concurrents. Les modifications s’appliquent à la
-                  prochaine exécution.
-                </p>
+                <h1>{t("BIBLIOTHÈQUE D’ALGORITHMES")}</h1>
+                <p className="subtle">{t("Activez les concurrents. Les modifications s’appliquent à la prochaine exécution.")}</p>
                 <div className="algorithm-list">
                   {state.algorithms.map((a) => (
                     <div
@@ -890,15 +862,13 @@ export default function Studio() {
                           setAlgorithmId(a.id);
                           setInspector(true);
                         }}
-                      >
-                        Paramètres →
-                      </button>
+                      >{t("Paramètres →")}</button>
                     </div>
                   ))}
                 </div>
                 {mode === "research" && (
                   <details>
-                    <summary>Extensions et paramètres avancés</summary>
+                    <summary>{t("Extensions et paramètres avancés")}</summary>
                     <fieldset disabled={running}>
                       <AlgorithmPanel
                         specs={state.specs}
@@ -911,21 +881,17 @@ export default function Studio() {
             )}
             {view === "compare" && (
               <section className="studio-card form-card">
-                <h1>COMPARER LES RÉSULTATS</h1>
-                <p className="subtle">
-                  Benchmark : tri HV puis IGD. Les valeurs sont propres au
-                  problème et au budget ; aucun algorithme n’est un gagnant
-                  universel.
-                </p>
+                <h1>{t("COMPARER LES RÉSULTATS")}</h1>
+                <p className="subtle">{t("Benchmark : tri HV puis IGD. Les valeurs sont propres au problème et au budget ; aucun algorithme n’est un gagnant universel.")}</p>
                 <div className="table-scroll">
                   <table>
                     <thead>
                       <tr>
-                        <th>Algorithme</th>
-                        <th>Génération</th>
+                        <th>{t("Algorithme")}</th>
+                        <th>{t("Génération")}</th>
                         <th>HV ↑</th>
                         <th>IGD ↓</th>
-                        <th>Temps (s)</th>
+                        <th>{t("Temps (s)")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -942,9 +908,7 @@ export default function Studio() {
                   </table>
                 </div>
                 {!state.leaderboard.length && (
-                  <p className="small-empty">
-                    Lancez un benchmark pour remplir ce tableau.
-                  </p>
+                  <p className="small-empty">{t("Lancez un benchmark pour remplir ce tableau.")}</p>
                 )}
               </section>
             )}
@@ -953,28 +917,23 @@ export default function Studio() {
             )}
             {view === "projects" && (
               <section className="studio-card form-card">
-                <h1>PROJETS LOCAUX</h1>
+                <h1>{t("PROJETS LOCAUX")}</h1>
                 <fieldset disabled={running}>
                   <Labs />
                 </fieldset>
-                <h2>Journal du moteur</h2>
-                <p className="subtle">
-                  Les manifestes et événements restent disponibles après
-                  redémarrage.
-                </p>
+                <h2>{t("Journal du moteur")}</h2>
+                <p className="subtle">{t("Les manifestes et événements restent disponibles après redémarrage.")}</p>
                 <div className="run-history">
                   {savedRuns.map((run) => (
                     <div key={run.run_id}>
                       <span>
                         {run.kind} ·{" "}
-                        {new Date(run.started_at).toLocaleString("fr")}
+                        {new Date(run.started_at).toLocaleString(state.language)}
                       </span>
                       <span className="pill">{run.status}</span>
                       <button
                         onClick={() => void exportFile("manifest", run.run_id)}
-                      >
-                        Manifeste
-                      </button>
+                      >{t("Manifeste")}</button>
                       {run.kind === "campaign" && (
                         <button
                           disabled={running}
@@ -982,9 +941,7 @@ export default function Studio() {
                             setView("statistics");
                             void campaign.resume(run.run_id);
                           }}
-                        >
-                          Reprendre
-                        </button>
+                        >{t("Reprendre")}</button>
                       )}
                     </div>
                   ))}
@@ -993,11 +950,8 @@ export default function Studio() {
             )}
             {view === "export" && (
               <section className="studio-card form-card">
-                <h1>EXPORTER ET REPRODUIRE</h1>
-                <p className="subtle">
-                  Conservez la configuration, les versions et les résultats de
-                  votre expérience.
-                </p>
+                <h1>{t("EXPORTER ET REPRODUIRE")}</h1>
+                <p className="subtle">{t("Conservez la configuration, les versions et les résultats de votre expérience.")}</p>
                 <div className="export-grid">
                   {["manifest", "csv", "pdf", "latex", "statistics"].map(
                     (format) => (
@@ -1014,18 +968,18 @@ export default function Studio() {
                         <strong>
                           {
                             {
-                              manifest: "Manifeste reproductible",
-                              csv: "Tableau CSV",
-                              pdf: "Rapport PDF",
-                              latex: "Tableau LaTeX",
-                              statistics: "Statistiques descriptives",
+                              manifest: t("Manifeste reproductible"),
+                              csv: t("Tableau CSV"),
+                              pdf: t("Rapport PDF"),
+                              latex: t("Tableau LaTeX"),
+                              statistics: t("Statistiques descriptives"),
                             }[format]
                           }
                         </strong>
                         <small>
                           {format === "manifest"
-                            ? "Graines, paramètres, versions et empreinte"
-                            : "Résultats du benchmark courant"}
+                            ? t("Graines, paramètres, versions et empreinte")
+                            : t("Résultats du benchmark courant")}
                         </small>
                       </button>
                     ),
@@ -1036,15 +990,9 @@ export default function Studio() {
                     onClick={() =>
                       download(scenario.result, "scenario-results.json")
                     }
-                  >
-                    Résultats et placements du scénario · JSON
-                  </button>
+                  >{t("Résultats et placements du scénario · JSON")}</button>
                 )}
-                <p className="info-box">
-                  Les exports synthétiques du benchmark conservent les 200
-                  derniers instantanés. Le journal paginé du moteur conserve les
-                  événements complets.
-                </p>
+                <p className="info-box">{t("Les exports synthétiques du benchmark conservent les 200 derniers instantanés. Le journal paginé du moteur conserve les événements complets.")}</p>
               </section>
             )}
             {view === "help" && (
@@ -1060,12 +1008,12 @@ export default function Studio() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      <aside className="studio-inspector" aria-label="Inspecteur">
+      <aside className="studio-inspector" aria-label={t("Inspecteur")}>
         <div className="inspector-heading">
-          <h2>Inspecteur</h2>
+          <h2>{t("Inspecteur")}</h2>
           <button
-            title="Masquer"
-            aria-label="Masquer l’inspecteur"
+            title={t("Masquer")}
+            aria-label={t("Masquer l’inspecteur")}
             onClick={() => setInspector(false)}
           >
             ↗
@@ -1078,22 +1026,20 @@ export default function Studio() {
             </span>
             <div>
               <strong>
-                {algorithm?.label ?? algorithm?.name ?? "Algorithme"}
+                {algorithm?.label ?? algorithm?.name ?? t("Algorithme")}
               </strong>
               <small>
                 {kind === "scenario"
-                  ? "Ordonnancement multi-objectif"
-                  : "Optimisation multi-objectif"}
+                  ? t("Ordonnancement multi-objectif")
+                  : t("Optimisation multi-objectif")}
               </small>
             </div>
           </div>
           <fieldset disabled={running}>
             {kind === "benchmark" ? (
               <>
-                <label>
-                  Algorithme
-                  <select
-                    aria-label="Algorithme inspecté"
+                <label>{t("Algorithme")}<select
+                    aria-label={t("Algorithme inspecté")}
                     value={algorithm?.id ?? ""}
                     onChange={(e) => setAlgorithmId(e.target.value)}
                   >
@@ -1117,9 +1063,9 @@ export default function Studio() {
                         {
                           {
                             population_size: "Population",
-                            generations: "Générations",
+                            generations: t("Générations"),
                             mutation_rate: "Mutation",
-                            crossover_rate: "Croisement",
+                            crossover_rate: t("Croisement"),
                           }[key]
                         }
                         <input
@@ -1147,8 +1093,8 @@ export default function Studio() {
                 {(
                   [
                     ["population", "Population"],
-                    ["generations", "Générations"],
-                    ["repetitions", "Répétitions"],
+                    ["generations", t("Générations")],
+                    ["repetitions", t("Répétitions")],
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key}>
@@ -1169,10 +1115,8 @@ export default function Studio() {
                 ))}
               </>
             )}
-            <label>
-              Graine
-              <input
-                aria-label="Graine"
+            <label>{t("Graine")}<input
+                aria-label={t("Graine")}
                 type="number"
                 min="0"
                 step="1"
@@ -1182,45 +1126,39 @@ export default function Studio() {
             </label>
           </fieldset>
           <details>
-            <summary>Protocole</summary>
-            <p>
-              Budget et graine sont fixés avant le lancement. Changer de vue
-              n’altère pas l’expérience.
-            </p>
+            <summary>{t("Protocole")}</summary>
+            <p>{t("Budget et graine sont fixés avant le lancement. Changer de vue n’altère pas l’expérience.")}</p>
             <span className="pill">
               {kind === "benchmark"
                 ? (state.problem.name ?? state.problem.kind)
-                : "DAG · listes déterministes"}
+                : t("DAG · listes déterministes")}
             </span>
           </details>
         </section>
         <section className="studio-card inspector-objectives">
           <div className="card-heading">
-            <h2>Objectifs</h2>
-            <button onClick={() => setView("objectives")}>Configurer</button>
+            <h2>{t("Objectifs")}</h2>
+            <button onClick={() => setView("objectives")}>{t("Configurer")}</button>
           </div>
           {labels.map((label) => (
             <div className="objective-row" key={label}>
               <span>{label}</span>
               <span>↓</span>
-              <small>Minimiser</small>
+              <small>{t("Minimiser")}</small>
             </div>
           ))}
         </section>
         {mode === "research" && selected && (
           <section className="studio-card decision-card">
-            <h2>Vecteur de décision</h2>
+            <h2>{t("Vecteur de décision")}</h2>
             <code>{selected.x.map(number).join(" · ")}</code>
             <small>{selected.id}</small>
           </section>
         )}
         {mode === "learn" && (
           <div className="learn-hint">
-            <strong>Qu’est-ce que Pareto ?</strong>
-            <p>
-              Une solution est non dominée lorsqu’aucune autre n’améliore un
-              objectif sans en dégrader un autre.
-            </p>
+            <strong>{t("Qu’est-ce que Pareto ?")}</strong>
+            <p>{t("Une solution est non dominée lorsqu’aucune autre n’améliore un objectif sans en dégrader un autre.")}</p>
           </div>
         )}
       </aside>
@@ -1231,36 +1169,33 @@ export default function Studio() {
         <div className="status-label">
           <strong>
             {running
-              ? "Simulation en cours…"
+              ? t("Simulation en cours…")
               : solutions.length
-                ? "Résultats disponibles"
-                : "Prêt à expérimenter"}
+                ? t("Résultats disponibles")
+                : t("Prêt à expérimenter")}
           </strong>
           <small>
             {running
-              ? "Calcul local · processus isolé"
-              : "Sélectionnez un compromis pour l’examiner"}
+              ? t("Calcul local · processus isolé")
+              : t("Sélectionnez un compromis pour l’examiner")}
           </small>
         </div>
         <progress
-          aria-label="Progression"
+          aria-label={t("Progression")}
           max="1"
           value={Math.min(1, progress)}
         />
         <span className="progress-text">
           {campaign.running
-            ? `Campagne ${campaign.progress.completed} / ${campaign.progress.total}`
+            ? `${t("Campagne")} ${campaign.progress.completed} / ${campaign.progress.total}`
             : kind === "benchmark"
-              ? `Génération ${maxGeneration} / ${targetGeneration}`
-              : `Répétitions ${scenario.progress.completed} / ${scenario.progress.total}`}
+              ? `${t("Génération")} ${maxGeneration} / ${targetGeneration}`
+              : `${t("Répétitions")} ${scenario.progress.completed} / ${scenario.progress.total}`}
         </span>
         <span className="elapsed">◷ {number(elapsed)} s</span>
         <span className="status-detail">
-          {state.algorithms.filter((a) => a.enabled).length} algorithme(s)
-        </span>
-        <button disabled={!running} onClick={stop}>
-          ■ Arrêter
-        </button>
+          {state.algorithms.filter((a) => a.enabled).length}{" "}{t("algorithme(s)")}</span>
+        <button disabled={!running} onClick={stop}>{t("■ Arrêter")}</button>
       </footer>
     </div>
   );

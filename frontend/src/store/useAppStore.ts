@@ -113,6 +113,14 @@ const getInitialLanguage = (): AppLanguage => {
     return "fr";
   }
   const stored = window.localStorage.getItem("algoarena-language");
+  const requested = new URLSearchParams(window.location.search).get("lang");
+  if (requested === "fr" || requested === "en") {
+    window.localStorage.setItem("algoarena-language", requested);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("lang");
+    window.history.replaceState(null, "", url);
+    return requested;
+  }
   if (stored === "fr" || stored === "en") {
     return stored;
   }

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { buildApiUrl, buildWsUrl } from "../lib/api";
 import type { ScenarioEnvironment } from "../types";
@@ -138,9 +139,9 @@ export function useScenario() {
         setRunning(false);
       }
       if (message.type === "error" || message.type.endsWith("_error"))
-        setError(message.error ?? "Une exécution a échoué.");
+        setError(message.error ?? t("Une exécution a échoué."));
     };
-    ws.onerror = () => setError("Connexion au moteur interrompue.");
+    ws.onerror = () => setError(t("Connexion au moteur interrompue."));
     ws.onclose = () => {
       if (socket.current === ws) setRunning(false);
     };
@@ -155,7 +156,7 @@ export function useScenario() {
       body: JSON.stringify({ request: payload.current, x: solution.x }),
       signal,
     });
-    if (!response.ok) throw new Error("Impossible de décoder cette solution.");
+    if (!response.ok) throw new Error(t("Impossible de décoder cette solution."));
     return (await response.json()).schedule;
   };
   return {

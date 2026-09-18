@@ -28,13 +28,17 @@ panel; smaller screens retain normal scrolling for readability.
 
 ### Application Windows : démarrer et arrêter
 
-Installez la version 3 avec `dist-electron/AlgoArena Desktop Setup 3.0.0.exe`,
+Installez la version 3 avec `dist-electron/AlgoArena Desktop Setup 3.0.1.exe`,
 puis ouvrez AlgoArena depuis son raccourci. Le lanceur propose **Application PC**
 (fenêtre dédiée) ou **Navigateur** (onglet local). Les calculs et les résultats
 sauvegardés sont les mêmes ; les réglages non sauvegardés restent propres à chaque fenêtre.
 Le runtime Python est intégré : aucun terminal ni installation Python n’est nécessaire.
-Gardez le lanceur ouvert pendant le travail. **Tout arrêter et quitter**, ou fermer
-le lanceur, arrête le moteur et les calculs en cours. Fermer l’onglet seul ne suffit pas.
+Le lanceur se ferme automatiquement après le choix. En mode PC, fermer la dernière
+fenêtre arrête le moteur et les calculs. En mode navigateur, l’icône AlgoArena près
+de l’horloge permet de rouvrir l’interface ou de **Tout arrêter et quitter**.
+Fermer l’onglet seul ne suffit pas à arrêter le moteur.
+Le sélecteur **FR / EN** du lanceur et du studio mémorise la langue ; les boutons,
+le tutoriel, les libellés, les dates et les nombres suivent ce choix, sans modifier les calculs.
 
 Dans le studio, **Tutoriel interactif** accompagne une première expérience réelle.
 Le bouton **?** à côté des modes explique leurs différences : Apprendre ajoute des

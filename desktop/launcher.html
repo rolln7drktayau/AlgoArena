@@ -1,8 +1,7 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'"><title>AlgoArena · Démarrer</title><link rel="stylesheet" href="launcher.css"></head>
-<body><header><img src="assets/icon.png" alt=""><div><h1>AlgoArena</h1><p>Votre laboratoire, sur votre ordinateur.</p></div></header>
-<main><h2>Comment souhaitez-vous travailler ?</h2><p>Les deux interfaces utilisent le même moteur local et les mêmes résultats sauvegardés. Aucun compte ni serveur distant requis.</p>
-<div class="choices"><button data-target="desktop"><strong>Application PC</strong><span>Une fenêtre dédiée pour se concentrer, présenter un cours ou travailler longtemps.</span><b>Ouvrir l’application →</b></button><button data-target="web"><strong>Navigateur</strong><span>Un onglet dans votre navigateur habituel, pratique à côté de vos documents.</span><b>Ouvrir le navigateur →</b></button></div>
-<p class="note">Apprendre, Explorer et Recherche sont des niveaux d’accompagnement à l’intérieur du studio. Ils sont disponibles dans les deux interfaces.</p>
-<p id="status" role="status" aria-live="polite">Choisissez une interface pour démarrer le moteur.</p>
-<footer><span>Fermer ce lanceur arrête le moteur et les calculs en cours.<br>Fermer un onglet ne suffit pas à arrêter AlgoArena.</span><button id="quit">Tout arrêter et quitter</button></footer></main><script src="launcher.js"></script></body></html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'"><title>AlgoArena</title><link rel="stylesheet" href="launcher.css"></head>
+<body><header><img src="assets/icon.png" alt=""><div><h1>AlgoArena</h1><p data-copy="tagline"></p></div><label class="language"><span data-copy="language"></span><select id="language"><option value="fr">Français</option><option value="en">English</option></select></label></header>
+<main><h2 data-copy="heading"></h2><p data-copy="intro"></p>
+<div class="choices"><button data-target="desktop" disabled><strong data-copy="desktop"></strong><span data-copy="desktopDescription"></span><b data-copy="openDesktop"></b></button><button data-target="web" disabled><strong data-copy="web"></strong><span data-copy="webDescription"></span><b data-copy="openWeb"></b></button></div>
+<p class="note" data-copy="modes"></p><p id="status" role="status" aria-live="polite"></p>
+<footer><span data-copy="stopHelp"></span><button id="quit" data-copy="quit"></button></footer></main><script src="launcher.js"></script></body></html>

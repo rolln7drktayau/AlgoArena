@@ -1,4 +1,6 @@
+import { t } from "./i18n";
 import { useMemo } from "react";
+import { useAppStore } from "../store/useAppStore";
 
 export interface Solution {
   id: string;
@@ -18,7 +20,7 @@ export interface ScheduleRow {
 export const number = (value: number | null | undefined) =>
   value == null || !Number.isFinite(value)
     ? "—"
-    : new Intl.NumberFormat("fr", { maximumFractionDigits: 4 }).format(value);
+    : new Intl.NumberFormat(useAppStore.getState().language, { maximumFractionDigits: 4 }).format(value);
 
 export function ParetoPlot({
   solutions,
@@ -61,12 +63,8 @@ export function ParetoPlot({
     return (
       <div className="studio-empty">
         <span className="empty-orbit">◌</span>
-        <h2>Votre prochain compromis commence ici</h2>
-        <p>
-          Choisissez un problème et lancez une expérience.
-          <br />
-          Le front se dessinera à partir des solutions calculées.
-        </p>
+        <h2>{t("Votre prochain compromis commence ici")}</h2>
+        <p>{t("Choisissez un problème et lancez une expérience.")}<br />{t("Le front se dessinera à partir des solutions calculées.")}</p>
       </div>
     );
   const [xmin, xmax] = bounds(xAxis),
@@ -76,7 +74,7 @@ export function ParetoPlot({
       className="pareto-svg"
       viewBox="0 0 860 370"
       role="group"
-      aria-label="Front de Pareto interactif"
+      aria-label={t("Front de Pareto interactif")}
     >
       {Array.from({ length: 6 }, (_, i) => (
         <g key={i} className="plot-grid">
@@ -142,9 +140,7 @@ export function Convergence({
     .filter((p) => Number.isFinite(p.value));
   if (!all.length)
     return (
-      <div className="small-empty">
-        Les mesures apparaîtront pendant l’exécution.
-      </div>
+      <div className="small-empty">{t("Les mesures apparaîtront pendant l’exécution.")}</div>
     );
   const maxX = Math.max(1, ...all.map((p) => p.generation));
   const minY = Math.min(0, ...all.map((p) => p.value)),
@@ -182,8 +178,7 @@ export function Convergence({
           <title>{s.name}</title>
         </polyline>
       ))}
-      <text className="axis-label" x={280} y={172} textAnchor="middle">
-        Générations · 0 — {maxX}
+      <text className="axis-label" x={280} y={172} textAnchor="middle">{t("Générations · 0 —")}{maxX}
       </text>
     </svg>
   );
@@ -193,7 +188,7 @@ export function Gantt({ rows }: { rows: ScheduleRow[] }) {
   const end = Math.max(1e-9, ...rows.map((r) => r.finish));
   return (
     <div className="gantt">
-      <p className="subtle">Temps en secondes · calcul par ressource</p>
+      <p className="subtle">{t("Temps en secondes · calcul par ressource")}</p>
       {rows.map((row) => (
         <div className="gantt-row" key={row.task_id}>
           <span title={row.parents.join(", ")}>

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { buildApiUrl, buildWsUrl } from "../lib/api";
 import { buildRunPayload, useAppStore } from "../store/useAppStore";
@@ -76,7 +77,7 @@ export function useCampaign() {
       }
       if (message.type === "error") setError(message.error);
     };
-    ws.onerror = () => setError("Connexion de campagne interrompue.");
+    ws.onerror = () => setError(t("Connexion de campagne interrompue."));
     ws.onclose = () => {
       if (socket.current === ws) setRunning(false);
     };
@@ -84,7 +85,7 @@ export function useCampaign() {
   const start = (problems: string[], seeds: number[], evaluations: number) => {
     const algorithms = buildRunPayload().algorithms;
     if (!algorithms.length) {
-      setError("Activez au moins un algorithme dans la bibliothèque.");
+      setError(t("Activez au moins un algorithme dans la bibliothèque."));
       return;
     }
     launch({
@@ -101,7 +102,7 @@ export function useCampaign() {
   const resume = async (id: string) => {
     try {
       const response = await fetch(buildApiUrl(`/api/runs/${id}/manifest`));
-      if (!response.ok) throw Error("Manifeste introuvable.");
+      if (!response.ok) throw Error(t("Manifeste introuvable."));
       const manifest = await response.json();
       launch({ ...manifest.config, resume_from: id });
     } catch (e) {
@@ -146,11 +147,8 @@ export function CampaignPanel({
   };
   return (
     <section className="studio-card form-card">
-      <h1>CAMPAGNES ET STATISTIQUES</h1>
-      <p className="subtle">
-        Problèmes × configurations actives × graines. Un résultat final par
-        exécution indépendante.
-      </p>
+      <h1>{t("CAMPAGNES ET STATISTIQUES")}</h1>
+      <p className="subtle">{t("Problèmes × configurations actives × graines. Un résultat final par exécution indépendante.")}</p>
       <fieldset disabled={disabled}>
         <div className="campaign-problems">
           {problems
@@ -172,13 +170,9 @@ export function CampaignPanel({
               </label>
             ))}
         </div>
-        <label className="field">
-          Graines de base distinctes, séparées par des virgules
-          <input value={seeds} onChange={(e) => setSeeds(e.target.value)} />
+        <label className="field">{t("Graines de base distinctes, séparées par des virgules")}<input value={seeds} onChange={(e) => setSeeds(e.target.value)} />
         </label>
-        <label className="field">
-          Budget demandé par exécution (évaluations)
-          <input
+        <label className="field">{t("Budget demandé par exécution (évaluations)")}<input
             type="number"
             min="100"
             max="100000"
@@ -196,17 +190,9 @@ export function CampaignPanel({
               budget,
             )
           }
-        >
-          Lancer la campagne
-        </button>
+        >{t("Lancer la campagne")}</button>
       </fieldset>
-      <p className="info-box">
-        Seuls les runs réussis ayant exactement le budget demandé entrent dans
-        les comparaisons. Le dépassement éventuel d’une génération complète est
-        signalé. Mann–Whitney bilatéral sur HV, correction de Holm, taille
-        d’effet ; minimum de cinq observations par groupe, sans garantie
-        universelle de puissance statistique.
-      </p>
+      <p className="info-box">{t("Seuls les runs réussis ayant exactement le budget demandé entrent dans les comparaisons. Le dépassement éventuel d’une génération complète est signalé. Mann–Whitney bilatéral sur HV, correction de Holm, taille d’effet ; minimum de cinq observations par groupe, sans garantie universelle de puissance statistique.")}</p>
       {campaign.error && (
         <p role="alert" className="studio-alert">
           {campaign.error}
@@ -214,19 +200,18 @@ export function CampaignPanel({
       )}
       {(campaign.running || campaign.samples.length > 0) && (
         <p>
-          {campaign.progress.completed} / {campaign.progress.total} exécutions
-        </p>
+          {campaign.progress.completed} / {campaign.progress.total}{t("exécutions")}</p>
       )}
       <div className="table-scroll">
         <table>
           <thead>
             <tr>
-              <th>Problème</th>
-              <th>Algorithme</th>
-              <th>Graine</th>
-              <th>Évaluations</th>
+              <th>{t("Problème")}</th>
+              <th>{t("Algorithme")}</th>
+              <th>{t("Graine")}</th>
+              <th>{t("Évaluations")}</th>
               <th>HV</th>
-              <th>Statut</th>
+              <th>{t("Statut")}</th>
             </tr>
           </thead>
           <tbody>
@@ -241,8 +226,8 @@ export function CampaignPanel({
                   {s.status === "failed"
                     ? s.error
                     : s.budget_exact
-                      ? "Budget respecté"
-                      : "Budget différent · exclu"}
+                      ? t("Budget respecté")
+                      : t("Budget différent · exclu")}
                 </td>
               </tr>
             ))}
@@ -251,14 +236,14 @@ export function CampaignPanel({
       </div>
       {campaign.result && (
         <>
-          <h2>Comparaisons entre groupes indépendants</h2>
+          <h2>{t("Comparaisons entre groupes indépendants")}</h2>
           {campaign.result.comparisons.length ? (
             <table>
               <thead>
                 <tr>
-                  <th>Comparaison</th>
-                  <th>p corrigée (Holm)</th>
-                  <th>Effet rang-bisérial</th>
+                  <th>{t("Comparaison")}</th>
+                  <th>{t("p corrigée (Holm)")}</th>
+                  <th>{t("Effet rang-bisérial")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,14 +259,9 @@ export function CampaignPanel({
               </tbody>
             </table>
           ) : (
-            <p className="subtle">
-              Pas de comparaison disponible : effectifs, référence HV ou budgets
-              insuffisants.
-            </p>
+            <p className="subtle">{t("Pas de comparaison disponible : effectifs, référence HV ou budgets insuffisants.")}</p>
           )}
-          <button onClick={download}>
-            Exporter la campagne complète · JSON
-          </button>
+          <button onClick={download}>{t("Exporter la campagne complète · JSON")}</button>
         </>
       )}
     </section>

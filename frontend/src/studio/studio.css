@@ -1334,3 +1334,6 @@ body.theme-light .nav-group h2 {
 .mode-dialog{background:#101e30;color:#e6eef8;border:1px solid #3b6685;border-radius:14px;width:min(560px,90vw);max-height:85dvh;padding:26px;line-height:1.6}.mode-dialog::backdrop{background:#0009}.mode-dialog dt{font-weight:700;color:#42c5fa;margin-top:12px}.mode-dialog dd{margin:3px 0}.mode-dialog button{background:#214361;color:white}
 .guided-tour{position:fixed;z-index:20;bottom:80px;left:210px;width:min(370px,calc(100vw - 40px));padding:18px;background:#12263c;color:#eff6ff;border:1px solid #3dbafa;border-radius:12px;box-shadow:0 12px 50px #0008;max-height:65dvh;overflow:auto}.tour-top,.tour-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.tour-top{font-size:11px;color:#67d6ff;margin-bottom:8px}.guided-tour h2:focus{outline:none}.guided-tour button{background:#204765;color:#fff}.guided-tour p{margin:10px 0;font-size:13px}.tour-launch{width:100%;margin-bottom:12px}
 @media(max-width:800px){.guided-tour{left:20px}.mode-description span{display:none}}
+.studio:not(.presentation) .header-tools{display:flex}
+.studio .header-tools select{min-width:55px;padding:6px}
+@media(min-width:1001px) and (max-width:1450px){.studio-header{gap:9px;padding:0 14px}.studio-brand{font-size:20px;padding-right:10px}.project-switch{max-width:140px}.connection{display:none}}

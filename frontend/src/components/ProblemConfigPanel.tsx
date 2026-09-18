@@ -4,7 +4,7 @@ import type { ProblemKind, ProblemSpec, WorkflowSpec } from "../types";
 import { useProfileFilter } from "../hooks/useProfileFilter";
 import { useAppStore } from "../store/useAppStore";
 
-export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) => {
+export const ProblemConfigPanel = ({ problems, onOpenScenario }: { problems: ProblemSpec[]; onOpenScenario?: () => void }) => {
   const problemConfig = useAppStore((state) => state.problemConfig);
   const setProblemConfig = useAppStore((state) => state.setProblemConfig);
   const setTab = useAppStore((state) => state.setTab);
@@ -331,7 +331,7 @@ export const ProblemConfigPanel = ({ problems }: { problems: ProblemSpec[] }) =>
           <h4 className="font-display text-sm text-ice">{text.workflows}</h4>
           <button
             type="button"
-            onClick={() => setTab("scenario")}
+            onClick={() => onOpenScenario ? onOpenScenario() : setTab("scenario")}
             className="rounded border border-stroke px-2 py-1 text-xs text-slate"
           >
             {text.openScenario}

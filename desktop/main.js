@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, shell, ipcMain, Tray, Menu } = require("electron");
 const { spawn } = require("child_process");
 const crypto = require("crypto");
 const path = require("path");
@@ -7,6 +7,34 @@ const http = require("http");
 
 let backendProcess = null;
 let backendLogPath = null;
+let tray = null;
+let activeTarget = null;
+let language = "fr";
+let quitting = false;
+const text = (fr, en) => language === "fr" ? fr : en;
+function studioUrl(port) { return `${buildBackendUrl(port)}/?lang=${language}`; }
+function saveLanguage(value) {
+  if (!["fr", "en"].includes(value)) throw Error("Unsupported language");
+  language = value;
+  fs.writeFileSync(path.join(app.getPath("userData"), "language.json"), JSON.stringify(value));
+  updateTray();
+}
+function updateTray() {
+  if (!tray) return;
+  tray.setToolTip(text("AlgoArena · moteur local actif", "AlgoArena · local engine running"));
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: text("Ouvrir le navigateur", "Open browser"), click: () => shell.openExternal(studioUrl(resolveBackendPort())) },
+    { label: text("Ouvrir l’application PC", "Open desktop app"), click: () => createWindow(resolveAppRoot(), resolveBackendPort()).catch(error => dialog.showErrorBox("AlgoArena", String(error))) },
+    { type: "separator" },
+    { label: text("Tout arrêter et quitter", "Stop everything and quit"), click: () => app.quit() }
+  ]));
+}
+function ensureTray() {
+  if (tray) return;
+  tray = new Tray(path.join(__dirname, "assets", process.platform === "win32" ? "icon.ico" : "icon.png"));
+  updateTray();
+  tray.on("double-click", () => shell.openExternal(studioUrl(resolveBackendPort())));
+}
 const DEFAULT_DESKTOP_BACKEND_PORT = 8765;
 
 function resolveBackendPort() {
@@ -172,7 +200,7 @@ async function ensureDesktopRuntime(appRoot) {
       return { runtimeRoot, runtimePython: bootstrapPython };
     } catch (error) {
       if (bootstrapPython.startsWith(bundledPythonRoot + path.sep)) {
-        throw new Error("Le runtime Python intégré est incomplet. Réinstallez une distribution complète d'AlgoArena.");
+        throw new Error(text("Le runtime Python intégré est incomplet. Réinstallez une distribution complète d'AlgoArena.", "The bundled Python runtime is incomplete. Reinstall the full AlgoArena distribution."));
       }
     }
   }
@@ -183,7 +211,7 @@ async function ensureDesktopRuntime(appRoot) {
 
   await runCommand(bootstrapPython, ["--version"], { cwd: appRoot }).catch(() => {
     throw new Error(
-      "Python introuvable. Installe Python 3.11+ ou definis ALGOARENA_PYTHON vers python.exe."
+      text("Python introuvable. Installez Python 3.11+ ou définissez ALGOARENA_PYTHON vers python.exe.", "Python not found. Install Python 3.11+ or point ALGOARENA_PYTHON to python.exe.")
     );
   });
 
@@ -294,7 +322,7 @@ function startBackend(appRoot, runtime, port) {
     await dialog.showMessageBox({
       type: "error",
       title: "AlgoArena Desktop",
-      message: "Impossible de demarrer le backend.",
+      message: text("Impossible de démarrer le moteur.", "Unable to start the engine."),
       detail: String(error)
     });
   });
@@ -323,7 +351,7 @@ async function stopBackend() {
   }
 }
 
-function createWindow(appRoot, port, startupInfo = null) {
+async function createWindow(appRoot, port, startupInfo = null) {
   const desktopTaskbarIcon = path.join(appRoot, "desktop", "assets", "icon-taskbar.ico");
   const desktopLegacyIcon = path.join(appRoot, "desktop", "assets", "icon.ico");
   const distLogo = path.join(appRoot, "frontend", "dist", "logo.png");
@@ -405,106 +433,89 @@ function createWindow(appRoot, port, startupInfo = null) {
   win.webContents.session.clearCache().catch(() => {
     // no-op
   });
-  win.loadURL(buildBackendUrl(port));
+  try { await win.loadURL(studioUrl(port)); }
+  catch (error) { win.destroy(); throw error; }
+  return win;
 }
 
 async function launchStudio(target) {
   const appRoot = resolveAppRoot();
-  const backendPort = resolveBackendPort();
-
-  if (backendProcess && await checkBackendHealth(backendPort)) {
-    if (target === "web") await shell.openExternal(buildBackendUrl(backendPort));
-    else createWindow(appRoot, backendPort);
-    return;
+  const port = resolveBackendPort();
+  if (!backendProcess) {
+    if (await checkBackendHealth(port)) throw Error(text("Le port du moteur est déjà utilisé. Fermez l’autre instance d’AlgoArena.", "The engine port is already in use. Close the other AlgoArena instance."));
+    const runtime = await ensureDesktopRuntime(appRoot);
+    if (quitting) return;
+    startBackend(appRoot, runtime, port);
+    if (!await waitForBackendReady(port)) {
+      await stopBackend();
+      throw Error(text("Le moteur n’a pas démarré. ", "The engine failed to start. ") + tailFile(backendLogPath));
+    }
   }
-  if (await checkBackendHealth(backendPort)) throw Error("Le port du moteur est déjà utilisé. Fermez l’autre instance d’AlgoArena.");
-
-  let runtime;
-  try {
-    runtime = await ensureDesktopRuntime(appRoot);
-  } catch (error) {
-    await dialog.showMessageBox({
-      type: "error",
-      title: "AlgoArena Desktop",
-      message: "Preparation automatique echouee.",
-      detail: String(error)
-    });
-    app.quit();
-    return;
-  }
-
-  startBackend(appRoot, runtime, backendPort);
-  const ready = await waitForBackendReady(backendPort);
-
-  if (!ready) {
-    const logTail = tailFile(backendLogPath, 50);
-    await dialog.showMessageBox({
-      type: "error",
-      title: "AlgoArena Desktop",
-      message: `Backend did not become ready on ${buildBackendUrl(backendPort)}.`,
-      detail:
-        "AlgoArena a tente la preparation automatiquement.\n" +
-        "Si le probleme persiste, lance une fois:\n" +
-        "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_windows.ps1\n\n" +
-        (backendLogPath ? `Log: ${backendLogPath}\n\n` : "") +
-        (logTail ? `Dernieres lignes:\n${logTail}` : "Aucun log backend disponible.")
-    });
-    await stopBackend();
-    app.quit();
-    return;
-  }
-
-  if (target === "web") await shell.openExternal(buildBackendUrl(backendPort));
-  else createWindow(appRoot, backendPort, {
-    title: "AlgoArena Desktop",
-    message: "AlgoArena is ready.",
-    localUrl: buildBackendUrl(backendPort),
-    docsUrl: `${buildBackendUrl(backendPort)}/docs`,
-    note: "Close this message to open the desktop window."
-  });
+  if (quitting) return;
+  if (target === "web") {
+    ensureTray();
+    await shell.openExternal(studioUrl(port));
+  } else await createWindow(appRoot, port);
+  activeTarget = target;
 }
 
-let quitting = false;
-if (!app.requestSingleInstanceLock()) app.quit();
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
 app.on("second-instance", () => {
-  const launcher = BrowserWindow.getAllWindows().find(win => win.getTitle().includes("Démarrer"));
-  if (launcher) { launcher.restore(); launcher.show(); launcher.focus(); }
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) { win.restore(); win.show(); win.focus(); }
+  else if (activeTarget === "web") void shell.openExternal(studioUrl(resolveBackendPort()));
 });
-app.whenReady().then(() => {
+if (primaryInstance) app.whenReady().then(() => {
+  try { const saved = JSON.parse(fs.readFileSync(path.join(app.getPath("userData"), "language.json"), "utf8")); if (["fr", "en"].includes(saved)) language = saved; }
+  catch (_) { language = app.getLocale().startsWith("fr") ? "fr" : "en"; }
   const launcher = new BrowserWindow({
     width: 780, height: 660, minWidth: 600, minHeight: 580,
     show: process.env.ALGOARENA_HEADLESS !== "1",
-    title: "AlgoArena · Démarrer", autoHideMenuBar: true,
+    title: "AlgoArena", autoHideMenuBar: true,
     backgroundColor: "#0b1220", icon: path.join(__dirname, "assets", "icon.ico"),
     webPreferences: { preload: path.join(__dirname, "launcher-preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
+  const fromLauncher = event => !launcher.isDestroyed() && event.sender === launcher.webContents && event.senderFrame === launcher.webContents.mainFrame;
   let launching = false;
+  ipcMain.handle("launcher:language", (event, value) => {
+    if (!fromLauncher(event)) throw Error("Unauthorized");
+    if (value !== undefined) saveLanguage(value);
+    return language;
+  });
+  ipcMain.handle("studio:language", (event, value) => {
+    if (event.senderFrame !== event.sender.mainFrame || new URL(event.sender.getURL()).origin !== buildBackendUrl()) throw Error("Unauthorized");
+    saveLanguage(value);
+  });
   ipcMain.handle("launcher:launch", async (event, target) => {
-    if (event.sender !== launcher.webContents || event.senderFrame !== launcher.webContents.mainFrame || !["web", "desktop"].includes(target)) throw Error("Action refusée");
-    if (launching) throw Error("Démarrage déjà en cours");
+    if (!fromLauncher(event) || !["web", "desktop"].includes(target)) throw Error("Unauthorized");
+    if (launching) throw Error(text("Démarrage déjà en cours", "Already starting"));
     launching = true;
-    try { await launchStudio(target); return "Moteur actif. Gardez ce lanceur ouvert ; fermez-le pour tout arrêter."; }
-    finally { launching = false; }
+    try {
+      await launchStudio(target);
+      if (!quitting && !launcher.isDestroyed()) launcher.destroy();
+    } catch (error) {
+      if (!activeTarget) { tray?.destroy(); tray = null; await stopBackend(); }
+      throw error;
+    } finally { launching = false; }
   });
-  ipcMain.handle("launcher:quit", (event) => {
-    if (event.sender === launcher.webContents && event.senderFrame === launcher.webContents.mainFrame) app.quit();
-  });
+  ipcMain.handle("launcher:quit", event => { if (fromLauncher(event)) app.quit(); });
   launcher.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   launcher.webContents.on("will-navigate", event => event.preventDefault());
   launcher.loadFile(path.join(__dirname, "launcher.html"));
-  launcher.on("closed", () => app.quit());
+  launcher.on("closed", () => { if (!activeTarget) app.quit(); });
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (activeTarget !== "web") app.quit();
 });
 
 app.on("before-quit", async (event) => {
   if (quitting) return;
   event.preventDefault();
   quitting = true;
+  tray?.destroy();
+  tray = null;
   await stopBackend();
   app.quit();
 });

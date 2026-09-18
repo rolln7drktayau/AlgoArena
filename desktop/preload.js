@@ -1,7 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("algoarenaDesktop", {
-  version: "3.0.0",
+  setLanguage: value => ipcRenderer.invoke("studio:language", value),
+  version: "3.0.1",
   onStartupInfo: (callback) => {
     if (typeof callback !== "function") {
       return () => {};
